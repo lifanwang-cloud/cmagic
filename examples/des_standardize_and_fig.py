@@ -33,13 +33,23 @@ def main():
             break
     salt = {r['snid']: r for r in csv.DictReader(
         open(os.path.join(HERE, 'des_salt3_comparison.csv')))}
+    probcc = {r['snid']: float(r['probcc'] or 0) for r in csv.DictReader(
+        ln for ln in open(os.path.join(HERE, 'data', 'des', 'des_probcc.csv'))
+        if not ln.startswith('#'))}
 
-    # ---- common fit set: CMAGIC ok + SALT3 ok ----
+    # ---- common fit set: CMAGIC ok + SALT3 ok + probable Ia ----
+    # The DES sample is photometrically classified; objects the release's own
+    # BEAMS classifier calls probable core-collapse (P(CC) > 0.5) are excluded
+    # from a Ia-method comparison and reported.
     rows = []
     for r in cmrows:
         s = salt.get(r['snid'])
         if r['failed'] or not r.get('mu') or s is None or s['salt3_cut'] \
                 or not s.get('mu'):
+            continue
+        if probcc.get(r['snid'], 0) > 0.5:
+            print(f'excluded as probable contaminant: {r["snid"]} '
+                  f'P(CC)={probcc[r["snid"]]:.2f}')
             continue
         rows.append(dict(
             snid=r['snid'], z=float(r['z']), mu=float(r['mu']),

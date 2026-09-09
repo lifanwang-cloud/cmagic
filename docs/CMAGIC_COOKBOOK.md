@@ -664,41 +664,62 @@ An architectural finding: the surviving dm15_provenance failures fire *inside th
 synthesis stage*, which external metadata cannot reach — passing priors into the
 synthesis is a v0.4 item. **At DES depth CMAGIC's real cost is yield, not scatter.**
 
-**Symmetric comparison (n = 53 common objects).** SALT3 Tripp coefficients refit on the
-sample (α = +0.056 ± 0.029, β = +2.95 ± 0.29, σ_int = 0.192); CMAGIC standardized per
-§6.1 (α_C = +0.083 ± 0.021, β_C = +0.66 ± 0.21, δ_S = −0.026 ± 0.040 — no significant
-mode split here; inflation L 1.45, S 1.60; post-fit r(x1) = r(c) = 0). Weighted rms:
+**Contamination.** The DES sample is photometrically classified, and one of the 53
+common objects is a certain non-Ia by the release's own BEAMS classifier
+(snid 1770639, P(CC) = 1.00; published residual +1.07 mag). It is an outlier in
+*both* methods' panels, but it damages the two weighted-rms figures very differently:
+SALT3's tight formal error makes the outlier expensive, while CMAGIC's inflated
+mode-S error had already downweighted it — a first parity-looking table built without
+the classification was an artifact of exactly this. Objects with P(CC) > 0.5 are now
+excluded (`data/des/des_probcc.csv`); one borderline object (P(CC) = 0.12) is kept.
+
+**Symmetric comparison (n = 52 clean common objects).** SALT3 Tripp coefficients refit
+on the sample (α = +0.095 ± 0.025, β = +2.88 ± 0.24, σ_int = 0.152); CMAGIC
+standardized per §6.1 (α_C = +0.063 ± 0.021, β_C = +0.63 ± 0.21,
+δ_S = −0.044 ± 0.040; inflation L 1.45, S 1.44; post-fit r(x1) = r(c) = 0).
+Weighted rms:
 
 | estimator | weighted rms |
 |---|---|
-| SALT3, refit on sample (same input tables) | 0.196 |
-| SALT3, release-grade (bias-corrected MU, full-flux photometry) | 0.214 |
-| CMAGIC standardized, all | 0.226 |
-| CMAGIC mode L only (n = 23) | **0.197** |
-| CMAGIC mode S only (n = 30) | 0.254 |
+| SALT3, release-grade (bias-corrected MU, full-flux photometry) | 0.151 |
+| SALT3, refit on sample (same input tables) | 0.158 |
+| CMAGIC mode L only (n = 23) | 0.198 |
+| CMAGIC standardized, all | 0.218 |
+| CMAGIC mode S only (n = 29) | 0.235 |
 
-CMAGIC mode L is at parity with SALT3 on DES — including with the survey's own
-bias-corrected distances on the same objects. The overall gap is 1.15×, driven
-entirely by mode S. Redshift drift: flat for every treatment (SALT3 fixed
-+0.117 ± 0.074 → refit +0.029 ± 0.069; CMAGIC −0.017 ± 0.078; release MU +0.030) —
-DES's selection control and bias corrections leave nothing like the SDSS §10.3 slope,
-and CMAGIC's z-flatness is confirmed at ±0.08 resolution.
+The clean gap is 1.25× for mode L and 1.4× overall — roughly **half** the SDSS 2.4×,
+but not parity.
 
-**The resolution of the §10.2 'mystery'** (CMAGIC beats peak methods at low z in
-W03/WS06, loses at 2.4× on SDSS): the gap tracks the signal-to-noise contrast between
-the light-curve peak and the CMAGIC window, which sits 1.5–2 mag below it. Direct
+**Published scatter, for reference** (computed from the release's own MURES over the
+full sample): DES SNe, plain rms 0.276 unweighted / 0.221 weighted — a number that
+*includes* the core-collapse contamination the cosmology likelihood downweights rather
+than removes; weighting by the release's own BEAMS P(Ia), 0.15 mag. External low-z
+subsample: 0.116. Per-z-bin core rms (|residual| < 0.5): 0.145–0.178. Our clean-set
+numbers sit at this published per-object level.
+
+**Redshift drift.** With the contaminant removed, the §10.3 pattern reproduces on DES:
+fixed-fiducial SALT3 drifts +0.168 ± 0.059 (2.9σ) low→high tercile, the sample refit
+halves it (+0.105 ± 0.057, 1.9σ), CMAGIC is flat (+0.032 ± 0.074), and the release's
+bias-corrected MU is flat (+0.030) — the survey's simulation-based corrections remove
+for SALT3 a drift that CMAGIC does not exhibit in the first place. (The low-z
+contaminant had masked this in the 53-object table, which read flat everywhere.)
+
+**The resolution of the 'mystery'** (CMAGIC beats peak methods at low z in W03/WS06,
+loses at 2.4× on SDSS): the gap tracks the signal-to-noise contrast between the
+light-curve peak and the CMAGIC window, which sits 1.5–2 mag below it. Direct
 evidence: the median fit error on B_BV0.6 rises 0.055 → 0.074 → 0.106 → 0.148 mag
 across the DES z bins (photon-noise floor), and SALT3's fitted σ_int jumps from 0.064
-(SDSS subset) to ≈ 0.19–0.21 (DES subset) — on DES *everyone* is photometry-limited,
-and the methods converge. At low z both regions have high SNR and CMAGIC's smaller
-intrinsic dispersion wins (W03); at intermediate z on shallow imaging SALT3's
-peak-anchored, all-epoch fit wins (SDSS, §10.3); at depth the playing field levels
-(DES). The corollary is the independence budget: the CMAGIC–SALT3 residual correlation
-is r = +0.01 ± 0.20 on SDSS but r = +0.73 ± 0.07 on DES — shared photon noise
-dominates at depth, so CMAGIC's value as an *independent* cross-check is a property of
-the intrinsic-limited regime (low z, or deep imaging of bright targets), while at the
-survey limit it functions as a consistency check with different systematics, not an
-independent one.
+(SDSS subset) to ≈ 0.15 (DES subset) — on DES everyone is photometry-limited and the
+gap halves. At low z both regions have high SNR and CMAGIC's smaller intrinsic
+dispersion wins (W03); at intermediate z on shallow imaging SALT3's peak-anchored,
+all-epoch fit wins most strongly (SDSS, §10.3); at depth the field partially levels
+(DES), with the remaining 1.25–1.4× owed to the window's photon-noise floor and the
+sparse mode. The corollary is the independence budget: the CMAGIC–SALT3 residual
+correlation is r = +0.01 ± 0.20 on SDSS but r = +0.67 ± 0.08 on DES — shared photon
+noise dominates at depth, so CMAGIC's value as an *independent* cross-check is a
+property of the intrinsic-limited regime (low z, or deep imaging of bright targets),
+while at the survey limit it functions as a consistency check with different
+systematics, not an independent one.
 
 Cross-check of our quick SALT3 fits against the release's: Δc median −0.001
 (rms 0.068), Δμ rms 0.156 about a +0.31 grey offset (their bias corrections and
