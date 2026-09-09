@@ -11,6 +11,9 @@ import matplotlib.pyplot as plt
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 rows = list(csv.DictReader(open(os.path.join(HERE, "sdss_salt3_comparison.csv"))))
+with open(os.path.join(HERE, "data", "sdss", "snid_iau_names.csv")) as fh:
+    NAMES = {r["snid"]: r["iau_name"] for r in csv.DictReader(
+        ln for ln in fh if not ln.startswith("#"))}
 S, C = [], []
 for r in rows:
     try:
@@ -20,15 +23,23 @@ for r in rows:
     if r["mu"] and not r["salt3_cut"]:
         S.append((z, float(r["mu"]) - mul, float(r["emu"])))
     if r["cm_mu"] and not r["cm_failed"]:
-        C.append((z, float(r["cm_mu"]) - mul, float(r["cm_emu"]), r["cm_mode"]))
+        C.append((z, float(r["cm_mu"]) - mul, float(r["cm_emu"]), r["cm_mode"], r["snid"]))
 S = np.array(S, dtype=float)
-Carr = np.array([(a, b, c) for a, b, c, _ in C], dtype=float)
-modes = [m for *_, m in C]
+Carr = np.array([(a, b, c) for a, b, c, _, _ in C], dtype=float)
+modes = [m for *_, m, _ in C]
+snids = [s for *_, s in C]
 gS = np.median(S[:, 1]); gC = np.median(Carr[:, 1])
 eS = np.sqrt(S[:, 2] ** 2 + 0.10 ** 2)
 
 fig, ax = plt.subplots(figsize=(10, 5.5))
 zc = {round(z, 6): dm - gC for (z, dm, e), m in zip(Carr, modes)}
+order = np.argsort(Carr[:, 0])
+for k, i in enumerate(order):
+    (z, dm, e), m, s = Carr[i], modes[i], snids[i]
+    dx, dy = [(4, 6), (4, -11), (-4, 6), (-4, -11)][k % 4]
+    ha = "left" if dx > 0 else "right"
+    ax.annotate(NAMES.get(s, s), (z, dm - gC), textcoords="offset points", xytext=(dx, dy),
+                fontsize=6, ha=ha, color={"L": "#c9631a", "S": "#2a7a2a"}.get(m, "grey"))
 for z, dm, e in S:
     if round(z, 6) in zc:
         ax.plot([z, z], [dm - gS, zc[round(z, 6)]], color="lightgrey", lw=0.8, zorder=1)
