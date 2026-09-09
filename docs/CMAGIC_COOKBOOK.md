@@ -412,3 +412,38 @@ exact source URLs), engine `hsiao` primary with the §8.1 insensitivity test per
 - **Template-insensitivity (§8.1)**: median B_BV0.6 spread over {x₁ ± 0.5, c ± 0.05,
   Hsiao} = **0.056 mag**, 90th percentile 0.091 — the stability claim holds at the
   few-hundredths level, and per-object spreads are carried as `K_systematic`.
+
+#### SALT3 comparison (same 60-SN subset; examples/sdss_salt3_comparison.py)
+
+SALT3 (sncosmo; Tripp with alpha = 0.14, beta = 3.1, M_B = −19.36; validity cuts
+|x₁| < 3, |c| < 0.3) fits **56 of 60**; the overlap with CMAGIC's 36 is **34 objects**.
+On the overlap, each method's own grey offset removed:
+
+| method | N | grey offset | rms | χ²/dof | rms (mode-L subset) |
+|---|---|---|---|---|---|
+| SALT3 | 34 | +0.34 | **0.142** | 11.2* | 0.093 |
+| CMAGIC | 34 | −0.20 | 0.315 | 4.3 | 0.241 |
+
+*SALT3's χ²/dof uses its formal fit errors with no intrinsic-scatter term; adding the
+usual σ_int ≈ 0.1 brings it to ≈1.3.
+
+**Residual correlation: Pearson r = −0.01 ± 0.18** — consistent with zero, formally even
+below the ~0.15 of W03/WS06 at low z, though CMAGIC's larger independent noise dilutes r
+at this depth: the data are consistent with the two methods sharing little beyond the
+photometry. Five of 34 objects show |Δμ| > 3σ (all with CMAGIC fainter than SALT3 at
+low z, K_systematic ≤ 0.08 — so not template-choice); and the Δμ panel exposes a
+**mode-dependent relative offset**: mean μ_CMAGIC − μ_SALT3 = −0.37 (mode L) versus
+−0.71 (mode S), an internal L-versus-S inconsistency of ≈ 0.34 mag that is invisible in
+CMAGIC's own Hubble scatter but obvious against the common SALT3 reference.
+
+**Honest paragraph.** On sparse, cross-filter SDSS-II data at v0.2.0, CMAGIC is not
+competitive with SALT3 as a distance estimator: 2–3× the residual rms on the same
+objects, a lower yield (36 vs 56), and an unresolved L-versus-S zero-point split —
+SALT3 was trained end-to-end for exactly this regime, while the CMAGIC chain here
+transfers a low-z, Vega-calibrated, two-band construction through template synthesis.
+What the comparison buys is what W03/WS06 originally claimed and the r ≈ 0 confirms:
+the two estimators are statistically independent, so CMAGIC remains valuable as a
+cross-check and systematics probe (its per-object K_systematic and named gates localize
+what SALT3 absorbs silently), and the identified defects — the sparse-mode error model,
+the synthesized-peak extinction estimator, and the mode-dependent zero point — are
+concrete v0.3 targets rather than fundamental limits.
