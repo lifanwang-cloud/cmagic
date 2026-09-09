@@ -18,7 +18,8 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
                subtype='normal', mode='auto', ebv_mw=0.0, rb_mw=4.15, rb_host=3.1,
                beta_fixed=calib.BETA_POPULATION, b_max=None, v_max=None,
                e_true=None, rb_true=None, h0=72., standardization='w03',
-               source='unspecified'):
+               source='unspecified', cov_BV=None, sigma_beta=0.16, sigma_int=0.08,
+               k_in_synthesis=False):
     """One CMAGIC measurement. Returns a provenance dict; 'failed' is None or the
     first fatal gate name; 'gates' is every gate evaluated (pass/fail)."""
     P = dict(mode_requested=mode, subtype=subtype, z=z, dm15=float(dm15),
@@ -47,7 +48,9 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
     P['locus'] = dict(phases=[round(float(x), 2) for x in php],
                       colors=[round(float(x), 3) for x in colp],
                       B=[round(float(x), 3) for x in Bp])
-    if len(php) < 3:
+    if len(php) < 1:
+        return fail('too_few_nights', 'no paired post-maximum nights')
+    if len(php) < 3 and mode in ('L', 'Q', 'R'):
         return fail('too_few_nights', '<3 paired post-maximum nights')
     sm = (np.convolve(colp, np.ones(3) / 3, 'same') if len(colp) >= 3
           else colp.copy())
@@ -73,8 +76,11 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
              sel=dict(phases=[round(float(x), 2) for x in php[sel]],
                       colors=[round(float(x), 3) for x in colp[sel]],
                       B=[round(float(x), 3) for x in Bp[sel]]))
-    if n < 4:
-        return fail('too_few_nights', f'{n} nights in the window')
+    sel_idx = np.where(cand)[0][o][sel] if cov_BV is not None else None
+    if n < 1:
+        return fail('too_few_nights', 'no nights in the window')
+    if n < 4 and mode in ('L', 'Q', 'R'):
+        return fail('too_few_nights', f'{n} nights in the window (mode {mode})')
     c = colp[sel]; B = Bp[sel]; w = 1 / eBp[sel] ** 2
     span = float(c.max() - c.min())
     gap = float(np.max(np.diff(np.sort(c)))) if n > 1 else 99.
@@ -83,7 +89,10 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
     reddened = c.min() > 0.6
     m = mode
     if m == 'auto':
-        m = 'L' if brackets06 else ('R' if reddened else 'Q')
+        if n >= 4:
+            m = 'L' if brackets06 else ('R' if reddened else 'Q')
+        else:
+            m = 'R' if reddened else 'S'
     P['mode'] = m
 
     def wlsq(deg, x0):
@@ -128,6 +137,42 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
             return fail('rms_gate', f'quadratic rms {rms_q:.3f} > 0.15')
         raw06 = float(coef[0])
         beta_used = float(coef[1])
+    elif m == 'S':
+        # ---- Mode S (sparse; COOKBOOK section 9): fixed-slope per-point estimates
+        # combined by GLS with the full covariance ----
+        mi = B - beta_fixed * (c - 0.6)
+        nS = len(mi)
+        if cov_BV is not None and sel_idx is not None:
+            nn = cov_BV.shape[0] // 2
+            J = np.zeros((nS, 2 * nn))
+            for a_, i_ in enumerate(sel_idx):
+                J[a_, i_] = 1. - beta_fixed
+                J[a_, nn + i_] = beta_fixed
+            Cm = J @ cov_BV @ J.T
+        else:
+            phs_sel = php[sel]
+            eV_near = np.array([eV[np.argmin(np.abs((tV - t_bmax) / (1 + z) - p))]
+                                for p in phs_sel]) if len(eV) else np.zeros(nS)
+            Cm = np.diag((1 - beta_fixed) ** 2 * eBp[sel] ** 2
+                         + beta_fixed ** 2 * eV_near ** 2)
+        Vslope = sigma_beta ** 2 * np.outer(c - 0.6, c - 0.6)
+        Vij = Cm + Vslope + np.eye(nS) * sigma_int ** 2
+        one = np.ones(nS)
+        Vinv = np.linalg.inv(Vij)
+        var = 1. / float(one @ Vinv @ one)
+        mhat = float(var * (one @ Vinv @ mi))
+        Vij_noslope = Cm + np.eye(nS) * sigma_int ** 2
+        Vinv0 = np.linalg.inv(Vij_noslope)
+        var0 = 1. / float(one @ Vinv0 @ one)
+        P.update(B_BV06_raw=round(mhat, 4), eB_BV06=round(float(np.sqrt(var)), 4),
+                 rms=round(float(np.std(mi)), 4) if nS > 1 else 0.0,
+                 n_window=nS, color_leverage=round(float(abs(np.mean(c) - 0.6)), 3),
+                 slope_syst_share=round(float(max(var - var0, 0.) / var), 3),
+                 sigma_beta=sigma_beta, sigma_int=sigma_int)
+        P['flags'].append(f'modeS: {nS} point(s), color leverage '
+                          f'{P["color_leverage"]}, slope-systematic share '
+                          f'{P["slope_syst_share"]}')
+        raw06 = mhat
     else:   # Mode R
         if b_max is None or v_max is None or not np.isfinite(b_max + v_max):
             return fail('no_bracket', 'Mode R requires B_max and V_max for E_guess')
@@ -146,17 +191,22 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
         if rms_f > 0.15:
             return fail('rms_gate', f'forced-slope rms {rms_f:.3f} > 0.15')
         raw06 = None
-    # ---- K corrections (corrected = raw - K) ----
+    # ---- K corrections (corrected = raw - K); skipped when the synthesis already
+    # performed the cross-filter K-correction (high-z path) ----
     E_raw = float(b_max - v_max) if (b_max is not None and v_max is not None
                                      and np.isfinite(b_max + v_max)) else 0.0
-    K_bbv = kcorr.kcorr_B(z, 0.6)
-    K_bmax = kcorr.kcorr_B(z, E_raw)
-    c15 = float(np.interp(15., php, colp))
-    K_dm15 = kcorr.psi_B(z) * (c15 - E_raw)
+    if k_in_synthesis:
+        K_bbv = K_bmax = K_dm15 = 0.0
+        P['flags'].append('K-corrections inside the template synthesis')
+    else:
+        K_bbv = kcorr.kcorr_B(z, 0.6)
+        K_bmax = kcorr.kcorr_B(z, E_raw)
+        c15 = float(np.interp(15., php, colp))
+        K_dm15 = kcorr.psi_B(z) * (c15 - E_raw)
     P.update(K_B_BV=round(K_bbv, 4), K_Bmax=round(K_bmax, 4),
              K_dm15=round(K_dm15, 4))
     dm15_k = dm15 - K_dm15
-    if m in ('L', 'Q'):
+    if m in ('L', 'Q', 'S'):
         b06_k = raw06 - K_bbv
         b06_mw = b06_k - (rb_mw - beta_used) * ebv_mw
         bint = b06_mw - 0.6 * beta_used
@@ -210,6 +260,9 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
              mu65=round(float(mu65), 4), mu=round(float(mu), 4),
              D_mpc=round(D, 3),
              eD_mpc=round(D * np.log(10) / 5
-                          * float(np.sqrt(sig ** 2 + P.get('eB_BV06', 0.05) ** 2)), 3),
+                          * float(np.sqrt(sig ** 2 + P.get('eB_BV06', 0.05) ** 2
+                                          + ((rb_host - beta_used) * 0.08) ** 2
+                                          * (1 if P.get('E_host') is not None
+                                             else 0))), 3),
              ok=True)
     return P

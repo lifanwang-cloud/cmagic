@@ -4,12 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cmagic"
-version = "0.1.0"
+version = "0.2.0"
 description = "Type Ia supernova distances from the color-magnitude intercept (CMAGIC; Wang et al. 2003; Wang, Strovink et al. 2006)"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 dependencies = ["numpy", "matplotlib"]
+
+[project.optional-dependencies]
+highz = ["sncosmo>=2.10"]
 
 [tool.setuptools]
 packages = ["cmagic"]

@@ -11,7 +11,7 @@ peak-magnitude methods and an intrinsic dispersion of ≈ 0.08–0.16 mag
 light curve and a redshift; it selects the fitting window, chooses the measurement mode,
 applies K-corrections and extinction corrections, standardizes, and returns a distance with
 its error — or an explicit, named reason why your data cannot yield one. The full method is
-documented in [docs/METHOD.md](docs/METHOD.md).
+documented in [docs/CMAGIC_COOKBOOK.md](docs/CMAGIC_COOKBOOK.md).
 
 ## Installation
 
@@ -71,7 +71,7 @@ result = cmagic.distance(
 
 If the data cannot support a distance, `result.failed` is the named gate
 (`window_empty`, `too_few_nights`, `no_bracket`, `dm15_provenance`, …) — see
-[docs/METHOD.md §7](docs/METHOD.md). The pipeline never returns a silently degraded number.
+[the Cookbook §7](docs/CMAGIC_COOKBOOK.md). The pipeline never returns a silently degraded number.
 
 ## Three rules about input photometry
 
@@ -81,6 +81,25 @@ If the data cannot support a distance, `result.failed` is the named gate
 2. B and V should be nightly (or denser) from a few days past maximum through
    about a month past maximum; pre-maximum data are used only to locate B_max and the peak color.
 3. Magnitudes in the Johnson–Cousins (Vega) system, or CSP natural (pass `system="csp"`).
+
+## High redshift (Rubin / Roman / JWST)
+
+At z > 0.1 (or with any non-BV filters) the same call synthesizes rest-frame B, V through
+a spectral template morphed to your photometry (Cookbook Part II), with Mode S handling
+sparse light curves (1–2 window epochs) at full covariance:
+
+```python
+import cmagic
+from cmagic.highz import register_filter
+register_filter('nircam_f150w', wave_A, trans)          # your own filter curves
+result = cmagic.distance(photometry=phot, z=0.31,
+                         filters={'g': 'lsstg', 'r': 'lsstr', 'i': 'lssti',
+                                  'F150W': 'nircam_f150w'},
+                         engine='auto')                 # hsiao + insensitivity test
+```
+
+Requires the optional extra `pip install cmagic[highz]` (sncosmo). The per-object
+template systematic is returned as `result.K_systematic` (Cookbook §8.1).
 
 ## Examples and validation
 

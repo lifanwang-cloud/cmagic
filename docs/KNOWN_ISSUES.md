@@ -34,3 +34,27 @@ silently patched:
 7. **WS06 bilinear standardization** is anchored to the W03 Table 3 zero point at
    dm15 = 1.1 because WS06 tabulate no absolute zero point (METHOD section 6 notes
    the anchoring).
+
+## v0.2.0 (high-redshift extension)
+
+8. **Grey Hubble zero point.** The SDSS-II validation shows a −0.17 mag grey offset of
+   the synthesized-chain distance moduli against ΛCDM(H₀=72): the W03 M_BV zero point
+   (Vega, low-z, H₀=65-rescaled) does not transfer exactly through template synthesis
+   and the SNANA/AB calibration of the validation photometry. It is a single global
+   constant (no measured z-tilt beyond the errors), documented rather than
+   recalibrated away; users comparing absolute distances across the low-z and high-z
+   paths should calibrate the offset on overlap objects.
+9. **Error budgets underestimate the observed high-z scatter** (validation χ²/dof ≈ 4
+   for mode L, ≈ 9 for mode S). Known missing terms: SMP photometry systematics,
+   host-extinction estimation on synthesized peak magnitudes, and the sparse-mode
+   extinction fragility at high color leverage. The Cookbook §10 passing criterion is
+   therefore not met at v0.2.0; numbers are reported as measured.
+10. **Monte Carlo scope.** The synthesis MC perturbs the photometry and re-derives the
+    per-epoch warps at fixed (t₀, stretch) [hsiao] or fixed converged (x₁, c)
+    [salt3-nir]; template-parameter uncertainty enters through the §8.1 insensitivity
+    spread (`K_systematic`), not the MC covariance.
+11. **MW extinction at high z** is removed from the observed bands to first order
+    (band-integrated CCM at the observed wavelengths) before synthesis; SDSS-field
+    E(B−V) ≲ 0.1 makes higher-order terms negligible there.
+12. **`system=` remains bookkeeping**; the high-z path assumes AB for survey filters
+    and Vega for bessell/csp/2mass names.

@@ -10,8 +10,12 @@ import re as _re
 import numpy as np
 
 
-def load_photometry(photometry, source_column=None):
-    """Normalize any accepted input into a list of row dicts."""
+def load_photometry(photometry, source_column=None, keep_all_bands=False,
+                    bandpass_column=None):
+    """Normalize any accepted input into a list of row dicts. By default only B and V
+    rows are kept (the Part I chain); keep_all_bands=True retains every band (the
+    high-z synthesis path), and bandpass_column names a per-row filter-identifier
+    column (e.g. 'sdssg') carried through as 'bandpass'."""
     rows = []
     if isinstance(photometry, (str, bytes)):
         with open(photometry) as fh:
@@ -36,11 +40,15 @@ def load_photometry(photometry, source_column=None):
         except (KeyError, TypeError, ValueError):
             continue
         b = str(r['band']).strip()
-        if b not in ('B', 'V') or not (np.isfinite(m) and np.isfinite(e)):
+        if not (np.isfinite(m) and np.isfinite(e)):
+            continue
+        if (not keep_all_bands) and b not in ('B', 'V'):
             continue
         if e > 0.5 or e < 0:
             continue
         out.append(dict(mjd=t, band=b, mag=m, emag=max(e, 0.01),
+                        bandpass=str(r.get(bandpass_column, '')) if bandpass_column
+                        else '',
                         source=str(r.get(source_column, '')) if source_column
                         else ''))
     return out
