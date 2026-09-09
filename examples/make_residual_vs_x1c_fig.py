@@ -14,17 +14,24 @@ for r in rows:
     if not (r["cm_mu"] and not r["cm_failed"] and r["x1"] and r["c"]):
         continue
     D.append((float(r["cm_mu"]) - float(r["mu_lcdm"]), float(r["c"]), float(r["x1"]),
-              r["cm_mode"], r["snid"]))
+              r["cm_mode"], r["snid"], float(r["cm_emu"] or 0.15),
+              float(r.get("ec") or 0) or None, float(r.get("ex1") or 0) or None))
 res = np.array([d[0] for d in D]); res -= np.median(res)
 c = np.array([d[1] for d in D]); x1 = np.array([d[2] for d in D])
 modes = [d[3] for d in D]; snids = [d[4] for d in D]
+emu = np.array([d[5] for d in D])
+ec = np.array([d[6] if d[6] else 0. for d in D])
+ex1 = np.array([d[7] if d[7] else 0. for d in D])
 
 fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4), sharey=True)
-for ax, x, xl in [(axes[0], c, "SALT3 color $c$"), (axes[1], x1, "SALT3 stretch $x_1$")]:
+for ax, x, xe, xl in [(axes[0], c, ec, "SALT3 color $c$"),
+                      (axes[1], x1, ex1, "SALT3 stretch $x_1$")]:
     for mk, mode, col in [("s", "L", "#c9631a"), ("D", "S", "#2a7a2a")]:
         sel = [i for i, m in enumerate(modes) if m == mode]
-        ax.scatter(x[sel], res[sel], marker=mk, s=45, facecolors="none",
-                   edgecolors=col, label=f"mode {mode} (n={len(sel)})")
+        ax.errorbar(x[sel], res[sel], yerr=emu[sel],
+                    xerr=xe[sel] if np.any(xe[sel] > 0) else None, fmt=mk, ms=7,
+                    mfc="none", mec=col, ecolor=col, elinewidth=0.6, capsize=0,
+                    ls="none", label=f"mode {mode} (n={len(sel)})", zorder=2)
     for k, i in enumerate(np.argsort(x)):
         dx, dy = [(4, 5), (4, -10), (-4, 5), (-4, -10)][k % 4]
         ax.annotate(snids[i], (x[i], res[i]), textcoords="offset points",

@@ -61,7 +61,17 @@ def salt3_fit(rows, z, mwebv):
         emu = float(np.sqrt(J @ C @ J))
     except Exception:
         pass
-    return dict(t0=p['t0'], x1=p['x1'], c=p['c'], mu=float(mu),
+    ex1 = ec = None
+    try:
+        vn = res.vparam_names
+        C = np.array(res.covariance)
+        if 'x1' in vn:
+            ex1 = float(np.sqrt(C[vn.index('x1'), vn.index('x1')]))
+        if 'c' in vn:
+            ec = float(np.sqrt(C[vn.index('c'), vn.index('c')]))
+    except Exception:
+        pass
+    return dict(t0=p['t0'], x1=p['x1'], c=p['c'], ex1=ex1, ec=ec, mu=float(mu),
                 emu=max(emu, 0.02), chisq=float(res.chisq), ndof=int(res.ndof))
 
 
@@ -136,7 +146,8 @@ def main():
     # ---- CSV ----
     with open(os.path.join(HERE, 'sdss_salt3_comparison.csv'), 'w',
               newline='') as f:
-        fields = ['snid', 'z', 'mu', 'emu', 'x1', 'c', 'salt3_cut', 'cm_mu',
+        fields = ['snid', 'z', 'mu', 'emu', 'x1', 'ex1', 'c', 'ec',
+                  'salt3_cut', 'cm_mu',
                   'cm_emu', 'cm_mode', 'cm_failed', 'K_syst', 'mu_lcdm']
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
@@ -152,10 +163,12 @@ def main():
     zg = np.linspace(0.04, 0.37, 80)
     a1.plot(zg, [mu_lcdm(x) for x in zg], 'k-', lw=1, label='LCDM(72, 0.3)')
     for r in s_ok:
-        a1.plot(r['z'], r['mu'] - off_s, 's', color='grey', ms=4, alpha=0.7)
+        a1.errorbar(r['z'], r['mu'] - off_s, yerr=r['emu'], fmt='s', color='grey',
+                    ms=4, alpha=0.7, elinewidth=0.6)
     for r in c_ok:
         col = 'tab:blue' if r['cm_mode'] == 'L' else 'tab:red'
-        a1.plot(r['z'], r['cm_mu'] - off_c, 'o', color=col, ms=4, alpha=0.8)
+        a1.errorbar(r['z'], r['cm_mu'] - off_c, yerr=r['cm_emu'] or 0.15, fmt='o',
+                    color=col, ms=4, alpha=0.8, elinewidth=0.6)
     a1.plot([], [], 's', color='grey', label=f'SALT3 ({len(s_ok)})')
     a1.plot([], [], 'o', color='tab:blue', label='CMAGIC L')
     a1.plot([], [], 'o', color='tab:red', label='CMAGIC S')
@@ -164,7 +177,8 @@ def main():
     a1.set_title('SDSS-II: SALT3 vs CMAGIC')
     for r, ds, dc in zip(both, rs_s, rs_c):
         col = 'tab:blue' if r['cm_mode'] == 'L' else 'tab:red'
-        a2.plot(ds, dc, 'o', color=col, ms=5, alpha=0.8)
+        a2.errorbar(ds, dc, xerr=r['emu'], yerr=r['cm_emu'] or 0.15, fmt='o',
+                    color=col, ms=5, alpha=0.8, elinewidth=0.6)
     lim = max(np.max(np.abs(rs_s)), np.max(np.abs(rs_c))) * 1.1
     a2.plot([-lim, lim], [-lim, lim], 'k:', lw=0.8)
     a2.axhline(0, color='k', lw=0.5); a2.axvline(0, color='k', lw=0.5)
@@ -174,7 +188,9 @@ def main():
     a2.grid(alpha=0.3)
     for r, ds, dc in zip(both, rs_s, rs_c):
         col = 'tab:blue' if r['cm_mode'] == 'L' else 'tab:red'
-        a3.plot(r['z'], dc - ds, 'o', color=col, ms=5, alpha=0.8)
+        a3.errorbar(r['z'], dc - ds,
+                    yerr=np.hypot(r['emu'], r['cm_emu'] or 0.15), fmt='o',
+                    color=col, ms=5, alpha=0.8, elinewidth=0.6)
     a3.axhline(0, color='k', lw=0.6)
     a3.set_xlabel('z'); a3.set_ylabel('mu_CMAGIC - mu_SALT3 [mag]')
     a3.set_title('per-object method difference')

@@ -74,3 +74,17 @@ silently patched:
     (R_B − beta)·E_host correction (backed out of the base mu when 'c' is fitted);
     the two are never applied together. Hsiao-engine covariates are approximations
     (s→x1 linear mapping; near-peak warp tilt as c) and are documented as such.
+
+## v0.3.1
+
+16. **Issue #9/#14 update**: per-fit χ²/dof error normalization is implemented for all
+    modes (PI rule; scale s = max(1, √(χ²/dof)) on the fit-parameter errors, recorded
+    per fit and on the panels). The sample-level per-mode factors barely shrink
+    (L 1.284 → 1.270, S 1.634 → 1.624) because the distance errors are dominated by the
+    calibration and host-estimator terms, not the fit-parameter error; the residual
+    factors are therefore re-interpreted as genuine population/intrinsic scatter plus
+    synthesis systematics.
+17. **Panels and figures carry full per-point error bars** (v0.3.1): the color-magnitude
+    x/y bars are correlated through B (the fit uses the full covariance; the bars
+    display the marginals); the residual-vs-covariate figures carry SALT3 ex1/ec where
+    available (columns added to the comparison CSV).

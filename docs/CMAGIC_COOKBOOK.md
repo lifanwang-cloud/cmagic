@@ -112,7 +112,13 @@ reported with its error as a *diagnostic*: values far from 1.94 on clean, single
 photometry indicate either peculiarity or time-variable extinction (see §7's SN 2006X note).
 A free-slope value is considered valid only if the fit has ≥ 5 nights, color span ≥ 0.25 mag,
 no internal color gap > 0.4 mag, rms ≤ 0.15 mag, and β_free within the WS06 validity cut
-[1.5, 2.5].
+[1.5, 2.5]. **Per-fit error normalization (v0.3.1, the PI's prescription): the errors of
+the CMAGIC fitting parameters must be normalized to χ²/dof = 1 per fit** — after every
+weighted fit (Modes L, Q, R, and the Mode S GLS with n ≥ 2, where n points give
+dof = n − 1 for the mean), the fit-parameter errors are scaled by
+s = max(1, √(χ²/dof)); χ²/dof and s are stored in the result and printed on the
+diagnostic panel. A single-point Mode S has no dof: it relies on the sample-level term
+and says so in its flags.
 
 ### Mode Q — quadratic interpolation
 
@@ -241,13 +247,21 @@ its correction applies only when the user excludes 'c' from the covariates.
 `distance()` output is estimator-pure, and the fitted corrections are a sample-level
 operation — exactly as SALT3's alpha/beta are training products, not per-object physics.
 
-**SDSS-II numbers (v0.3, 28-object fit set; 6 objects newly gated by the
-boundary-hit rule, snids 1794/2017/2031/2440/2635/2992, and 2030 excluded for its
-bound-hit external covariate):** M0 = +0.142 ± 0.037, delta_S = −0.101 ± 0.062,
-alpha_C = −0.055 ± 0.038, beta_C = +0.953 ± 0.348. Pre → post: rms 0.246 → 0.213
-(mode L 0.181 → 0.165, mode S 0.292 → 0.263); chi²/dof 2.85 → 2.09, and 1.0 per mode
-after inflation (factors L 1.28, S 1.63). Post-fit weighted correlations: r(x1) = 0.00,
-r(c) = 0.00 (unweighted −0.06, +0.01).
+**SDSS-II numbers (v0.3.1 per-fit-normalized errors; 28-object fit set; 6 objects gated
+by the boundary-hit rule, snids 1794/2017/2031/2440/2635/2992, and 2030 excluded for its
+bound-hit external covariate):** M0 = +0.145 ± 0.036, delta_S = −0.101 ± 0.063,
+alpha_C = −0.056 ± 0.038, beta_C = +0.941 ± 0.346. Pre → post: rms 0.246 → 0.213
+(mode L 0.181 → 0.165, mode S 0.292 → 0.263); chi²/dof 2.81 → 2.05, and 1.0 per mode
+after inflation. Post-fit weighted correlations: r(x1) = 0.00, r(c) = 0.00.
+
+**The per-fit normalization and the sample factors (honest accounting).** The v0.3.1
+per-fit rescaling barely moves the sample-level inflation (L 1.284 → 1.270,
+S 1.634 → 1.624): the per-object distance error is dominated by the calibration
+dispersion (0.07–0.16) and the host-estimator term (≈0.09), so even a ×1.5 rescaling of
+the fit-parameter error (e.g. snid 5103: χ²/dof = 2.2, eB_BV0.6 0.049 → 0.073) shifts
+the total error by only a few thousandths of a magnitude. The residual sample factors
+therefore measure genuine population/intrinsic scatter plus synthesis systematics — not
+fit inconsistency, which is now normalized away per fit as prescribed.
 
 ---
 
@@ -510,3 +524,27 @@ the Hubble figure: SALT3 0.143 unweighted / 0.133 weighted (n = 56); CMAGIC mode
 0.165 / 0.170 (n = 16); mode S 0.263 / 0.272 (n = 12). With the fitted corrections and
 honest error inflation, mode L is within ~30% of SALT3's scatter on the same photometry;
 the sparse mode remains information-limited, as its error bars now correctly reflect.
+
+
+#### v0.3.1 note to the SALT3 comparison
+
+With the per-fit error normalization and the boundary gates, the overlap is 28 objects;
+CMAGIC rms 0.274 (χ²/dof 3.25 pre-standardization; grey −0.07), residual correlation
+with SALT3 r = +0.01 ± 0.20, three >3σ Δμ outliers. Every figure now carries per-point
+error bars (x and y), including all 60 per-object panels (failed objects get a named
+failure panel), with χ²/dof and the applied error scale printed in each annotation.
+
+### 10.3 Weighted Hubble residuals (v0.3.1)
+
+Inverse-variance-weighted mean residuals against ΛCDM (H₀ = 72, Ω_m = 0.3), errors of the
+mean scaled by √(χ²/dof) where above 1. Standardized CMAGIC (M₀ removed by the fit):
+all −0.001 ± 0.038 (χ²/dof 0.98, n = 28); mode L −0.000 ± 0.043 (1.00, 16); mode S
+−0.003 ± 0.083 (1.03, 12) — the per-mode χ²/dof ≈ 1 is an outcome of the v0.3.1 error
+model, not a construction. By redshift bin: +0.036 ± 0.053 (z 0.05–0.15), −0.061 ± 0.071
+(0.15–0.25), +0.073 ± 0.140 (0.25–0.35): no redshift trend, and z was never a fitted
+covariate. On the same photometry SALT3's weighted residual (its own convention offset
+removed only globally) drifts by +0.161 ± 0.049 (3.3σ) from the low to the high bin —
+plausibly survey selection and population drift through fixed Tripp coefficients. With
+only six CMAGIC objects in the top bin this is an observation to monitor, not a claim:
+if the flatness survives larger samples, redshift stability becomes one of CMAGIC's
+distinguishing properties as a cross-check estimator.

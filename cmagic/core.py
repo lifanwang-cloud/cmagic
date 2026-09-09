@@ -45,9 +45,15 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
     o = np.argsort(ph[cand])
     php = ph[cand][o]; colp = (mB - Vi)[cand][o]
     Bp = mB[cand][o]; eBp = eB[cand][o]
+    tBc = tB[cand][o]
+    eV_near_all = (np.array([eV[np.argmin(np.abs(tV - t))] for t in tBc])
+                   if len(eV) else np.zeros(len(tBc)))
+    ecolp = np.sqrt(eBp ** 2 + eV_near_all ** 2)
     P['locus'] = dict(phases=[round(float(x), 2) for x in php],
                       colors=[round(float(x), 3) for x in colp],
-                      B=[round(float(x), 3) for x in Bp])
+                      B=[round(float(x), 3) for x in Bp],
+                      eB=[round(float(x), 4) for x in eBp],
+                      ecol=[round(float(x), 4) for x in ecolp])
     if len(php) < 1:
         return fail('too_few_nights', 'no paired post-maximum nights')
     if len(php) < 3 and mode in ('L', 'Q', 'R'):
@@ -75,7 +81,9 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
                        round(float(colp[sel].max()), 3)] if n else None,
              sel=dict(phases=[round(float(x), 2) for x in php[sel]],
                       colors=[round(float(x), 3) for x in colp[sel]],
-                      B=[round(float(x), 3) for x in Bp[sel]]))
+                      B=[round(float(x), 3) for x in Bp[sel]],
+                      eB=[round(float(x), 4) for x in eBp[sel]],
+                      ecol=[round(float(x), 4) for x in ecolp[sel]]))
     sel_idx = np.where(cand)[0][o][sel] if cov_BV is not None else None
     if n < 1:
         return fail('too_few_nights', 'no nights in the window')
@@ -104,7 +112,10 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
 
     def free_diag(x0):
         coef, cov, rms_free = wlsq(1, x0)
-        bf, ebf = float(coef[1]), float(np.sqrt(cov[1, 1]))
+        res_free = B - np.vander(c - x0, 2, increasing=True) @ coef
+        chi2dof_f = float(np.sum(res_free ** 2 * w) / max(n - 2, 1))
+        sf = max(1., float(np.sqrt(chi2dof_f)))
+        bf, ebf = float(coef[1]), sf * float(np.sqrt(cov[1, 1]))
         valid = bool(n >= 5 and span >= 0.25 and gap <= 0.4 and rms_free <= 0.15
                      and 1.5 <= bf <= 2.5)
         P.update(beta_free=round(bf, 3), ebeta_free=round(ebf, 3),
@@ -118,10 +129,14 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
         if not brackets06:
             return fail('no_bracket', 'branch does not span B-V = 0.6')
         b06_f = float(np.average(B - beta_fixed * (c - 0.6), weights=w))
-        rms_f = float(np.sqrt(np.mean((B - (b06_f + beta_fixed * (c - 0.6))) ** 2)))
+        res_f = B - (b06_f + beta_fixed * (c - 0.6))
+        rms_f = float(np.sqrt(np.mean(res_f ** 2)))
+        # PI rule (v0.3.1): normalize fit-parameter errors to chi2/dof = 1 per fit
+        chi2dof = float(np.sum(res_f ** 2 * w) / max(n - 1, 1))
+        s_err = max(1., float(np.sqrt(chi2dof)))
         P.update(B_BV06_raw=round(b06_f, 4), rms=round(rms_f, 4),
-                 eB_BV06=round(max(float(np.sqrt(1 / w.sum())),
-                                   rms_f / np.sqrt(n)), 4))
+                 chi2dof=round(chi2dof, 2), err_scale=round(s_err, 3),
+                 eB_BV06=round(s_err * float(np.sqrt(1 / w.sum())), 4))
         free_diag(0.6)
         if rms_f > 0.15:
             return fail('rms_gate', f'forced-slope rms {rms_f:.3f} > 0.15')
@@ -130,8 +145,13 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
         if not brackets06:
             return fail('no_bracket', 'branch does not span B-V = 0.6')
         coef, cov, rms_q = wlsq(2, 0.6)
+        res_q = B - np.vander(c - 0.6, 3, increasing=True) @ coef
+        chi2dof = float(np.sum(res_q ** 2 * w) / max(n - 3, 1))
+        s_err = max(1., float(np.sqrt(chi2dof)))
         P.update(B_BV06_raw=round(float(coef[0]), 4),
-                 eB_BV06=round(float(np.sqrt(cov[0, 0])), 4), rms=round(rms_q, 4),
+                 chi2dof=round(chi2dof, 2), err_scale=round(s_err, 3),
+                 eB_BV06=round(s_err * float(np.sqrt(cov[0, 0])), 4),
+                 rms=round(rms_q, 4),
                  quad_coefs=[round(float(x), 4) for x in coef])
         if rms_q > 0.15:
             return fail('rms_gate', f'quadratic rms {rms_q:.3f} > 0.15')
@@ -164,7 +184,18 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
         Vij_noslope = Cm + np.eye(nS) * sigma_int ** 2
         Vinv0 = np.linalg.inv(Vij_noslope)
         var0 = 1. / float(one @ Vinv0 @ one)
-        P.update(B_BV06_raw=round(mhat, 4), eB_BV06=round(float(np.sqrt(var)), 4),
+        if nS >= 2:
+            rgls = mi - mhat
+            chi2dof = float(rgls @ Vinv @ rgls) / (nS - 1)
+            s_err = max(1., float(np.sqrt(chi2dof)))
+        else:
+            chi2dof, s_err = None, 1.0
+            P['flags'].append('modeS_single_point_no_chi2: per-fit normalization '
+                              'impossible; relying on the sample-level term')
+        P.update(B_BV06_raw=round(mhat, 4),
+                 chi2dof=None if chi2dof is None else round(chi2dof, 2),
+                 err_scale=round(s_err, 3),
+                 eB_BV06=round(s_err * float(np.sqrt(var)), 4),
                  rms=round(float(np.std(mi)), 4) if nS > 1 else 0.0,
                  n_window=nS, color_leverage=round(float(abs(np.mean(c) - 0.6)), 3),
                  slope_syst_share=round(float(max(var - var0, 0.) / var), 3),
@@ -186,10 +217,13 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
             return fail('no_bracket',
                         f'branch does not span the shifted target c*={cstar:.2f}')
         bstar = float(np.average(B - beta_fixed * (c - cstar), weights=w))
-        rms_f = float(np.sqrt(np.mean((B - (bstar + beta_fixed * (c - cstar))) ** 2)))
+        res_r = B - (bstar + beta_fixed * (c - cstar))
+        rms_f = float(np.sqrt(np.mean(res_r ** 2)))
+        chi2dof = float(np.sum(res_r ** 2 * w) / max(n - 1, 1))
+        s_err = max(1., float(np.sqrt(chi2dof)))
         P.update(m_star=round(bstar, 4), rms=round(rms_f, 4), beta_used=beta_fixed,
-                 eB_BV06=round(max(float(np.sqrt(1 / w.sum())),
-                                   rms_f / np.sqrt(n)), 4))
+                 chi2dof=round(chi2dof, 2), err_scale=round(s_err, 3),
+                 eB_BV06=round(s_err * float(np.sqrt(1 / w.sum())), 4))
         free_diag(cstar)
         if rms_f > 0.15:
             return fail('rms_gate', f'forced-slope rms {rms_f:.3f} > 0.15')

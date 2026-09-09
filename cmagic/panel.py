@@ -13,12 +13,19 @@ def make_panel(P, path, title=''):
     if loc and loc['phases']:
         ph = np.array(loc['phases']); col = np.array(loc['colors'])
         B = np.array(loc['B'])
-        ax.plot(col, B, 'o', color='grey', ms=5, alpha=0.55, label='paired nights')
+        eBl = np.array(loc.get('eB', [0.] * len(col)))
+        ecl = np.array(loc.get('ecol', [0.] * len(col)))
+        ax.errorbar(col, B, yerr=eBl, xerr=ecl, fmt='o', color='grey', ms=5,
+                    alpha=0.55, elinewidth=0.7, capsize=0, zorder=1,
+                    label='paired nights')
         s = P.get('sel')
         if s and s['phases']:
             sc = np.array(s['colors']); sB = np.array(s['B'])
-            ax.plot(sc, sB, 'o', color='tab:blue', ms=7, mec='k',
-                    label=f"selected (mode {P.get('mode', '?')})")
+            ax.errorbar(sc, sB, yerr=np.array(s.get('eB', [0.] * len(sc))),
+                        xerr=np.array(s.get('ecol', [0.] * len(sc))), fmt='o',
+                        color='tab:blue', ms=7, mec='k', elinewidth=0.8,
+                        capsize=0, zorder=2,
+                        label=f"selected (mode {P.get('mode', '?')})")
             for p_, c_, b_ in zip(s['phases'], sc, sB):
                 ax.annotate(f'+{p_:.0f}', (c_, b_), textcoords='offset points',
                             xytext=(5, 5), fontsize=7, color='tab:blue')
@@ -53,9 +60,12 @@ def make_panel(P, path, title=''):
         ax.invert_yaxis()
         ins = axc
         o_ = np.argsort(ph)
-        ins.plot(ph[o_], col[o_], '.-', color='grey', ms=3, lw=0.7)
+        ins.errorbar(ph[o_], col[o_], yerr=ecl[o_] if len(ecl) == len(ph) else None,
+                     fmt='.-', color='grey', ms=3, lw=0.7, elinewidth=0.5)
         if s and s['phases']:
-            ins.plot(s['phases'], s['colors'], 'o', color='tab:blue', ms=3)
+            ins.errorbar(s['phases'], s['colors'],
+                         yerr=np.array(s.get('ecol', [0.] * len(s['phases']))),
+                         fmt='o', color='tab:blue', ms=3, elinewidth=0.5)
         if P.get('t_BVmax') is not None:
             ins.axvline(P['t_BVmax'], color='firebrick', ls='--', lw=0.9)
         if P.get('window'):
@@ -64,7 +74,8 @@ def make_panel(P, path, title=''):
         ins.set_ylabel('B-V', fontsize=6)
         ins.tick_params(labelsize=6)
         ins.set_title('color curve + window', fontsize=6.5)
-    lines = [f"source: {P.get('source')}",
+    lines = ['x/y bars are correlated through B; the fit uses the full covariance',
+             f"source: {P.get('source')}",
              f"mode {P.get('mode', '?')}; window {P.get('window')} d"]
     if P.get('n_sel'):
         lines.append(f"n={P['n_sel']} ph {P.get('ph_span')} col {P.get('col_span')}")
@@ -72,6 +83,10 @@ def make_panel(P, path, title=''):
               'M_BV', 'mu', 'D_mpc'):
         if P.get(k) is not None:
             lines.append(f'{k}={P[k]}')
+    if P.get('chi2dof') is not None:
+        lines.append(f"chi2/dof={P['chi2dof']}, errors x{P.get('err_scale')}")
+    elif P.get('err_scale') is not None:
+        lines.append(f"errors x{P.get('err_scale')} (no per-fit chi2: single point)")
     if P.get('beta_free') is not None:
         lines.append(f"beta_free={P['beta_free']}+-{P.get('ebeta_free')} "
                      f"[{'valid' if P.get('beta_free_valid') else 'diagnostic only'}]")

@@ -23,10 +23,12 @@ import cmagic                                                # noqa: E402
 
 def main():
     meta, phot = load_cache()
-    covs = {}
+    covs, coverr = {}, {}
     for r in csv.DictReader(open(os.path.join(HERE, 'sdss_salt3_comparison.csv'))):
         if r.get('x1') and r.get('c') and not r.get('salt3_cut'):
             covs[r['snid']] = (float(r['x1']), float(r['c']))
+            coverr[r['snid']] = (float(r.get('ex1') or 0.),
+                                 float(r.get('ec') or 0.))
     results, ids, newly_gated = [], [], []
     FILTERS = {'g': 'sdssg', 'r': 'sdssr', 'i': 'sdssi', 'z': 'sdssz'}
     prev = {r['snid']: r for r in csv.DictReader(
@@ -91,13 +93,18 @@ def main():
     res_pre -= np.median(res_pre)
     # residual vs x1/c, POST-correction, same style/labels as the pre figure
     fig, axes = plt.subplots(1, 2, figsize=(12.5, 5.4), sharey=True)
-    for ax, x, xl in [(axes[0], c, 'SALT3 color $c$'),
-                      (axes[1], x1, 'SALT3 stretch $x_1$')]:
+    emu_c = np.array([S.emu_corr[i] or 0.15 for i in range(len(fitset))])
+    ex1 = np.array([coverr.get(s_, (0., 0.))[0] for s_ in fitids])
+    ecc = np.array([coverr.get(s_, (0., 0.))[1] for s_ in fitids])
+    for ax, x, xe, xl in [(axes[0], c, ecc, 'SALT3 color $c$'),
+                          (axes[1], x1, ex1, 'SALT3 stretch $x_1$')]:
         for mk, mode, col in [('s', 'L', '#c9631a'), ('D', 'S', '#2a7a2a')]:
             sel = [i for i, m in enumerate(modes) if m == mode]
-            ax.scatter(x[sel], res_post[sel], marker=mk, s=45,
-                       facecolors='none', edgecolors=col,
-                       label=f'mode {mode} (n={len(sel)})')
+            ax.errorbar(x[sel], res_post[sel], yerr=emu_c[sel],
+                        xerr=xe[sel] if np.any(xe[sel] > 0) else None,
+                        fmt=mk, ms=7, mfc='none', mec=col, ecolor=col,
+                        elinewidth=0.6, ls='none',
+                        label=f'mode {mode} (n={len(sel)})')
         for k, i in enumerate(np.argsort(x)):
             dx, dy = [(4, 5), (4, -10), (-4, 5), (-4, -10)][k % 4]
             ax.annotate(fitids[i], (x[i], res_post[i]),
@@ -119,16 +126,23 @@ def main():
                              'sdss_cmagic_residual_vs_x1c_post.png'), dpi=170)
     # Hubble residuals pre/post
     fig, (a1, a2) = plt.subplots(2, 1, figsize=(8.5, 7), sharex=True)
-    for a, rr, ttl in ((a1, res_pre, 'v0.2 (grey removed)'),
-                       (a2, res_post, 'v0.3 standardized '
-                        '(M0, delta_S, alpha_C, beta_C removed)')):
+    emu_pre = np.array([(5 / np.log(10)) * r.eD_mpc / r.D_mpc
+                        if (r.eD_mpc and r.D_mpc) else 0.15 for r in fitset])
+    for a, rr, ee, ttl in ((a1, res_pre, emu_pre, 'raw chain (grey removed)'),
+                           (a2, res_post, emu_c, 'standardized '
+                            '(M0, delta_S, alpha_C, beta_C removed)')):
         for mk, mode, col in [('s', 'L', '#c9631a'), ('D', 'S', '#2a7a2a')]:
             sel = [i for i, m in enumerate(modes) if m == mode]
-            a.scatter(zs[sel], rr[sel], marker=mk, s=40, facecolors='none',
-                      edgecolors=col, label=f'mode {mode}')
+            a.errorbar(zs[sel], rr[sel], yerr=ee[sel], fmt=mk, ms=6, mfc='none',
+                       mec=col, ecolor=col, elinewidth=0.6, ls='none',
+                       label=f'mode {mode}')
         a.axhline(0, color='k', lw=0.7)
         a.set_ylabel('residual [mag]')
-        a.set_title(f'{ttl}: rms {np.std(rr):.3f}', fontsize=10)
+        w_ = 1 / ee ** 2
+        rms_w = float(np.sqrt(np.average((rr - np.average(rr, weights=w_)) ** 2,
+                                         weights=w_)))
+        a.set_title(f'{ttl}: rms {np.std(rr):.3f} (weighted {rms_w:.3f})',
+                    fontsize=10)
         a.grid(alpha=0.3); a.legend(fontsize=8)
         a.set_ylim(-0.9, 0.9)
     a2.set_xlabel('z')

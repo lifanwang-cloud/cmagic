@@ -9,7 +9,7 @@ from . import io, core, calib, kcorr           # noqa: F401
 from .core import cmagic_fit                   # noqa: F401
 from .sample import standardize_sample, SampleStandardization  # noqa: F401
 
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __all__ = ['distance', 'CMagicResult', 'cmagic_fit', 'standardize_sample',
            'SampleStandardization']
 
@@ -40,6 +40,8 @@ class CMagicResult:
     c_star: float | None = None
     x1: float | None = None
     c: float | None = None
+    chi2dof: float | None = None
+    err_scale: float | None = None
     template: str | None = None
     engine: str | None = None
     K_systematic: float | None = None
@@ -148,6 +150,7 @@ def distance(photometry, z, t_bmax=None, dm15=None, ebv_mw=0.0, rb_host=3.1,
         window=P.get('window'), n_nights=P.get('n_sel'), rms=P.get('rms'),
         gates=P.get('gates', {}), flags=P.get('flags', []),
         failed=P.get('failed'), source=str(src_used),
+        chi2dof=P.get('chi2dof'), err_scale=P.get('err_scale'),
         t_bmax=t_bmax, dm15=float(dm15), m_star=P.get('m_star'),
         c_star=P.get('c_star'),
         provenance={**P, 'peak_fit': pk, 'system': system, **prov_extra})
@@ -162,6 +165,7 @@ def _distance_highz(rows_all, z, dm15=None, ebv_mw=0.0, rb_host=3.1, h0=72.0,
                     sigma_beta=0.16, subtype='normal', rb_mw=4.15,
                     standardization='w03', mode='auto', e_true=None,
                     rb_true=None, system='ab'):
+    panel_path = panel
     """High-redshift chain: MW de-reddening of the observed bands, template
     synthesis of rest-frame B, V (COOKBOOK section 8), then the Part I fit on the
     synthesized light curve with the synthesis covariance (Mode S when sparse)."""
@@ -169,12 +173,14 @@ def _distance_highz(rows_all, z, dm15=None, ebv_mw=0.0, rb_host=3.1, h0=72.0,
 
     def _fail(gate, note, prov):
         res = CMagicResult(failed=gate, gates={g: 'pass' for g in core.GATE_NAMES})
-        if gate not in res.gates:
-            res.gates[gate] = 'fail'
-        else:
-            res.gates[gate] = 'fail'
+        res.gates[gate] = 'fail'
         res.flags = [note]
         res.provenance = prov
+        if panel_path:
+            from .panel import make_panel
+            make_panel(dict(failed=gate, flags=[note], gates=res.gates,
+                            source=f'synthesis:{engine}', ok=False),
+                       panel_path, title=f'CMAGIC high-z FAILED: {gate} (z={z})')
         return res
 
     rows = [dict(r) for r in rows_all if r.get('bandpass')]
@@ -249,6 +255,7 @@ def _distance_highz(rows_all, z, dm15=None, ebv_mw=0.0, rb_host=3.1, h0=72.0,
         window=P.get('window'), n_nights=P.get('n_sel'), rms=P.get('rms'),
         gates=P.get('gates', {}), flags=P.get('flags', []),
         failed=P.get('failed'), source=f'synthesis:{eng}',
+        chi2dof=P.get('chi2dof'), err_scale=P.get('err_scale'),
         t_bmax=t0, dm15=float(dm15_use), m_star=P.get('m_star'),
         c_star=P.get('c_star'),
         x1=syn.get('x1'), c=syn.get('c'),
