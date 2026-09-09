@@ -629,4 +629,11 @@ of it is a cosmology-grade statement:
 
 What survives as the monitoring target: CMAGIC's redshift stability at its present
 ±0.10 mag resolution, to be retested on a sample with per-bin errors below 0.05 mag.
-Reproduce the decomposition with `examples/sdss_salt3_drift_diagnostic.py`.
+Reproduce the decomposition with `examples/sdss_salt3_drift_diagnostic.py`; the
+symmetric-treatment Hubble diagram (both methods' standardization fit on the same
+28 objects, with the tercile-drift panel) is
+`examples/make_hubble_residual_fig_symmetric.py` →
+`figures/sdss_hubble_residuals_symmetric.png`. Under that treatment the weighted rms is
+0.080 (SALT3 refit) vs 0.196 (CMAGIC) — both are post-fit quantities (3 and 4
+parameters respectively fit on the same 28 objects), so the ~2.4× scatter gap is the
+honest like-for-like number at v0.3.1.
