@@ -70,6 +70,14 @@ def main():
     if only:
         meta = [m for m in meta if m['snid'] in only]
     tag = '_assisted' if assisted else ''
+    if '--replot' in sys.argv:
+        out = []
+        for r in csv.DictReader(open(os.path.join(HERE, f'des_validation{tag}.csv'))):
+            for k in ('z', 'mu', 'emu', 'mu_lcdm', 'K_syst', 'eB_fit'):
+                r[k] = float(r[k]) if r.get(k) else None
+            r['failed'] = r['failed'] or None
+            out.append(r)
+        return finish(out, tag)
     print(f'{len(meta)} DES-SN5YR cosmology-sample Ia in the cache'
           + (' [ASSISTED: t_bmax=release PKMJD, dm15 from release SALT3 x1/c]'
              if assisted else ' [BLIND]'))
@@ -112,6 +120,10 @@ def main():
         print(f'[{k+1}/{len(meta)}] {m["snid"]} z={m["z"]:.3f} '
               f'{"FAIL:" + str(res.failed) if res.failed else res.mode}',
               flush=True)
+    return finish(out, tag)
+
+
+def finish(out, tag):
     # ---- summary ----
     okr = [r for r in out if not r['failed'] and r.get('mu') is not None]
     fails = [r for r in out if r['failed']]
@@ -169,6 +181,15 @@ def main():
                     ms=4, alpha=0.8, elinewidth=0.7)
         a2.errorbar(r['z'], r['mu'] - r['mu_lcdm'] - off, yerr=r['emu'] or 0.15,
                     fmt='o', color=c, ms=4, alpha=0.8, elinewidth=0.7)
+    okz = np.argsort([r['z'] for r in okr])
+    for k, i in enumerate(okz):
+        r = okr[i]
+        c = {'L': 'tab:blue', 'Q': 'tab:orange', 'S': 'tab:red',
+             'R': 'tab:green'}.get(r['mode'], 'k')
+        dx, dy = [(3, 5), (3, -10), (-3, 5), (-3, -10)][k % 4]
+        a2.annotate(r['snid'], (r['z'], r['mu'] - r['mu_lcdm'] - off),
+                    textcoords='offset points', xytext=(dx, dy),
+                    ha='left' if dx > 0 else 'right', fontsize=5.0, color=c)
     for mname, c in (('L', 'tab:blue'), ('Q', 'tab:orange'), ('S', 'tab:red')):
         a1.plot([], [], 'o', color=c, label=f'mode {mname} ({modes.get(mname, 0)})')
     a2.axhline(0, color='k', lw=0.7)
@@ -176,8 +197,9 @@ def main():
     a2.set_ylabel('residual [mag]')
     a2.set_xlabel('heliocentric redshift')
     a1.legend(fontsize=8)
-    a1.set_title(f'DES-SN5YR SNe Ia: CMAGIC high-z chain, blind '
-                 f'({len(okr)} fit / {len(out)})')
+    a1.set_title(f'DES-SN5YR SNe Ia: CMAGIC high-z chain, '
+                 f'{"assisted" if tag else "blind"} '
+                 f'({len(okr)} fit / {len(out)}; labels = DES SNID)')
     a1.grid(alpha=0.3); a2.grid(alpha=0.3)
     a2.set_ylim(-1, 1)
     fig.tight_layout()
