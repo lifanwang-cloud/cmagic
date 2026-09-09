@@ -353,6 +353,9 @@ slides points along the dust vector. The free slope is CMAGIC's built-in dust-va
 - Tripp, R. 1998, A&A, 331, 815
 - Riess, A. G., et al. 1998, AJ, 116, 1009
 - Perlmutter, S., et al. 1999, ApJ, 517, 565
+- Conley, A., et al. 2006, ApJ, 644, 1 (the blind CMAGIC cosmology at high z)
+- DES Collaboration 2024, ApJ, 973, L14; Sánchez, B. O., et al. 2024, ApJ, 975, 5
+  (DES-SN5YR release, github.com/des-science/DES-SN5YR)
 
 ---
 
@@ -363,7 +366,10 @@ redshift the observer-frame filters no longer sample the rest-frame B and V band
 **cross-filter K-corrections** are required — effectively interpolations of the observed
 multi-band photometry, guided by a spectral template, from the observer frame to the
 rest-frame B and V light curves that CMAGIC needs. This part formulates that extension,
-its sparse-data estimator, and its validation.
+its sparse-data estimator, and its validation. There is direct precedent: Conley et al.
+(2006, ApJ 644, 1) measured (Ω_m, Ω_Λ) from a blind CMAGIC analysis of 21 high-z SNe —
+on "data sets not observed in a manner optimized for CMAGIC" — and confirmed the
+acceleration through the color–magnitude channel.
 
 ## 8. The cross-filter problem and the template-synthesis solution
 
@@ -636,4 +642,66 @@ symmetric-treatment Hubble diagram (both methods' standardization fit on the sam
 `figures/sdss_hubble_residuals_symmetric.png`. Under that treatment the weighted rms is
 0.080 (SALT3 refit) vs 0.196 (CMAGIC) — both are post-fit quantities (3 and 4
 parameters respectively fit on the same 28 objects), so the ~2.4× scatter gap is the
-honest like-for-like number at v0.3.1.
+honest like-for-like number at v0.3.1. (What that gap measures — and where it goes —
+is §10.4.)
+
+### 10.4 DES-SN5YR validation: the scatter gap closes at depth
+
+**Data.** The public DES-SN5YR release (DES Collaboration 2024; light curves Sánchez
+et al. 2024; github.com/des-science/DES-SN5YR). The repository caches 122
+cosmology-sample SNe Ia at zHEL = 0.05–0.65 — the range where rest-frame B and V are
+synthesizable from griz — stratified in redshift (all z < 0.2, 25 per bin above;
+`examples/data/des/`), SNANA SMP fluxes converted to magnitudes at SNR ≥ 3, the same
+convention as the SDSS-II cache so both runs feed the identical pipeline. The release's
+own SALT3 (x1, c) and bias-corrected MU ride along for cross-checks. Precedent for
+CMAGIC at these redshifts: Conley et al. (2006) — see Part II's introduction.
+
+**Yield.** Blind, the chain fits 47/122 (21 L, 26 S). Assisted with release metadata
+(`t_bmax` = PKMJD; external Δm15 synthesized from the release SALT3 x1, c): 56/122
+(23 L, 33 S). SALT3 fits 112/122 of the same tables. Failure census (assisted):
+dm15_provenance 30, rms_gate 16, no_bracket 13, window_empty 4, too_few_nights 3.
+An architectural finding: the surviving dm15_provenance failures fire *inside the
+synthesis stage*, which external metadata cannot reach — passing priors into the
+synthesis is a v0.4 item. **At DES depth CMAGIC's real cost is yield, not scatter.**
+
+**Symmetric comparison (n = 53 common objects).** SALT3 Tripp coefficients refit on the
+sample (α = +0.056 ± 0.029, β = +2.95 ± 0.29, σ_int = 0.192); CMAGIC standardized per
+§6.1 (α_C = +0.083 ± 0.021, β_C = +0.66 ± 0.21, δ_S = −0.026 ± 0.040 — no significant
+mode split here; inflation L 1.45, S 1.60; post-fit r(x1) = r(c) = 0). Weighted rms:
+
+| estimator | weighted rms |
+|---|---|
+| SALT3, refit on sample (same input tables) | 0.196 |
+| SALT3, release-grade (bias-corrected MU, full-flux photometry) | 0.214 |
+| CMAGIC standardized, all | 0.226 |
+| CMAGIC mode L only (n = 23) | **0.197** |
+| CMAGIC mode S only (n = 30) | 0.254 |
+
+CMAGIC mode L is at parity with SALT3 on DES — including with the survey's own
+bias-corrected distances on the same objects. The overall gap is 1.15×, driven
+entirely by mode S. Redshift drift: flat for every treatment (SALT3 fixed
++0.117 ± 0.074 → refit +0.029 ± 0.069; CMAGIC −0.017 ± 0.078; release MU +0.030) —
+DES's selection control and bias corrections leave nothing like the SDSS §10.3 slope,
+and CMAGIC's z-flatness is confirmed at ±0.08 resolution.
+
+**The resolution of the §10.2 'mystery'** (CMAGIC beats peak methods at low z in
+W03/WS06, loses at 2.4× on SDSS): the gap tracks the signal-to-noise contrast between
+the light-curve peak and the CMAGIC window, which sits 1.5–2 mag below it. Direct
+evidence: the median fit error on B_BV0.6 rises 0.055 → 0.074 → 0.106 → 0.148 mag
+across the DES z bins (photon-noise floor), and SALT3's fitted σ_int jumps from 0.064
+(SDSS subset) to ≈ 0.19–0.21 (DES subset) — on DES *everyone* is photometry-limited,
+and the methods converge. At low z both regions have high SNR and CMAGIC's smaller
+intrinsic dispersion wins (W03); at intermediate z on shallow imaging SALT3's
+peak-anchored, all-epoch fit wins (SDSS, §10.3); at depth the playing field levels
+(DES). The corollary is the independence budget: the CMAGIC–SALT3 residual correlation
+is r = +0.01 ± 0.20 on SDSS but r = +0.73 ± 0.07 on DES — shared photon noise
+dominates at depth, so CMAGIC's value as an *independent* cross-check is a property of
+the intrinsic-limited regime (low z, or deep imaging of bright targets), while at the
+survey limit it functions as a consistency check with different systematics, not an
+independent one.
+
+Cross-check of our quick SALT3 fits against the release's: Δc median −0.001
+(rms 0.068), Δμ rms 0.156 about a +0.31 grey offset (their bias corrections and
+zero-point convention). Reproduce: `examples/des_validation.py [--assisted]`,
+`examples/des_salt3_comparison.py`, `examples/des_standardize_and_fig.py` →
+`figures/des_hubble_residuals_symmetric.png`.
