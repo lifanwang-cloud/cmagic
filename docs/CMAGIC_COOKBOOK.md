@@ -729,6 +729,24 @@ bias-corrected MU on the same objects, in which the cosmology cancels exactly:
 CMAGIC −0.033 ± 0.090 (consistent with the survey's standardization), our quick SALT3
 +0.089 ± 0.076 (its uncorrected selection residue).
 
+**Showing no residual z-dependence, CMAGIC is closer to ΛCDM** (the PI's reading, made
+precise): the *uncorrected* CMAGIC Hubble diagram is consistent with flat
+ΛCDM(0.3) on both surveys with no bias corrections applied (+0.016 ± 0.103 SDSS,
++0.032 ± 0.074 DES), while the equally uncorrected SALT3 diagram tilts away at 2–3σ
+on both and reaches ΛCDM only after simulation-based corrections. Two structural
+reasons make this expected rather than fortunate: the §5.1 fixed-β mechanism does not
+apply (the color lever is halved, and no universal β is imposed on a z-drifting color
+mixture), and Malmquist selection acts on *peak* flux while CMAGIC's candle is read
+1.5–2 mag below peak at fixed color — selection on peak brightness enters B_BV0.6
+only through the peak–B_BV0.6 correlation, structurally diluting the dominant high-z
+selection bias. The sharpest cosmology-free version — the per-object difference
+μ_SALT3 − μ_CMAGIC on the same 52 SNe, where cosmology *and* the shared photon noise
+cancel — drifts +0.080 ± 0.064 (1.2σ, bootstrap): the same sense, not yet significant
+at this sample size. And the claim's limit: CMAGIC's flatness resolution (±0.07–0.10)
+is wider than the μ-tilt separating Ω_m = 0.30 from 0.35 (0.02–0.03 mag), so "closer
+to ΛCDM" here means *consistent without correction* — a systematics property, not yet
+a competitive cosmology measurement.
+
 **The resolution of the 'mystery'** (CMAGIC beats peak methods at low z in W03/WS06,
 loses at 2.4× on SDSS): the gap tracks the signal-to-noise contrast between the
 light-curve peak and the CMAGIC window, which sits 1.5–2 mag below it. Direct
