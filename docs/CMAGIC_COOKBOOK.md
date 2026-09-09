@@ -497,3 +497,16 @@ from rms 0.32 (v0.2 overlap) to **0.21 mag** overall (0.165 mode L), the L-versu
 zero-point split is absorbed into delta_S = −0.10 ± 0.06, and the per-mode error budgets
 close (chi²/dof = 1 by construction of the inflation). SALT3 remains tighter (0.14/0.09);
 the gap after correction is ≈1.5× rather than ≈2–3×.
+
+### 10.2 Scatter-statistics convention
+
+Two scatter statistics are quoted throughout, and every table states which it uses.
+The **unweighted rms** is the plain standard deviation of the Hubble residuals; the
+**error-weighted rms** is (Σw r²/Σw)^½ with w = 1/σ² and each method's *weighted* grey
+offset removed. Fits (the sample standardization of §6.1, and every regression in the
+pipeline) are always error-weighted; scatter tables in earlier sections quoted the
+unweighted rms unless marked. On the v0.3 standardized SDSS-II sample, both are shown in
+the Hubble figure: SALT3 0.143 unweighted / 0.133 weighted (n = 56); CMAGIC mode L
+0.165 / 0.170 (n = 16); mode S 0.263 / 0.272 (n = 12). With the fitted corrections and
+honest error inflation, mode L is within ~30% of SALT3's scatter on the same photometry;
+the sparse mode remains information-limited, as its error bars now correctly reflect.
