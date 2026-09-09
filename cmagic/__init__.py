@@ -7,9 +7,11 @@ import numpy as np
 
 from . import io, core, calib, kcorr           # noqa: F401
 from .core import cmagic_fit                   # noqa: F401
+from .sample import standardize_sample, SampleStandardization  # noqa: F401
 
-__version__ = '0.2.0'
-__all__ = ['distance', 'CMagicResult', 'cmagic_fit']
+__version__ = '0.3.0'
+__all__ = ['distance', 'CMagicResult', 'cmagic_fit', 'standardize_sample',
+           'SampleStandardization']
 
 
 @dataclass
@@ -36,6 +38,8 @@ class CMagicResult:
     dm15: float | None = None
     m_star: float | None = None
     c_star: float | None = None
+    x1: float | None = None
+    c: float | None = None
     template: str | None = None
     engine: str | None = None
     K_systematic: float | None = None
@@ -247,6 +251,7 @@ def _distance_highz(rows_all, z, dm15=None, ebv_mw=0.0, rb_host=3.1, h0=72.0,
         failed=P.get('failed'), source=f'synthesis:{eng}',
         t_bmax=t0, dm15=float(dm15_use), m_star=P.get('m_star'),
         c_star=P.get('c_star'),
+        x1=syn.get('x1'), c=syn.get('c'),
         template=eng, engine=eng, K_systematic=K_syst,
         n_window=P.get('n_window', P.get('n_sel')),
         color_leverage=P.get('color_leverage'),

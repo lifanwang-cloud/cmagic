@@ -145,7 +145,7 @@ def warped_rest_BV(rows, z, model_obs, model_rest, t0, s=1.0, mag_lookup=None):
     ccm, ccmB, ccmV = _band_dust_coeffs(model_obs, model_rest, bands, t0)
     tmid = np.array([np.mean([r['mjd'] for r in e]) for e in eps])
     ph = (tmid - t0) / (1 + z)
-    B, V = [], []
+    B, V, warps = [], [], []
     for e, p_ in zip(eps, ph):
         A, y = [], []
         for r in e:
@@ -157,7 +157,7 @@ def warped_rest_BV(rows, z, model_obs, model_rest, t0, s=1.0, mag_lookup=None):
             A.append([1., ccm[r['bandpass']]])
             y.append(mag_lookup(r) - msyn)
         if not y:
-            B.append(np.nan); V.append(np.nan)
+            B.append(np.nan); V.append(np.nan); warps.append((np.nan, np.nan))
             continue
         A = np.array(A); y = np.array(y)
         if len(y) == 1:
@@ -165,6 +165,7 @@ def warped_rest_BV(rows, z, model_obs, model_rest, t0, s=1.0, mag_lookup=None):
         else:
             sol, *_ = np.linalg.lstsq(A, y, rcond=None)
             g, k = float(sol[0]), float(sol[1])
+        warps.append((g, k))
         try:
             mB = model_rest.bandmag('bessellb', 'vega', p_ / s)
             mV = model_rest.bandmag('bessellv', 'vega', p_ / s)
@@ -173,7 +174,7 @@ def warped_rest_BV(rows, z, model_obs, model_rest, t0, s=1.0, mag_lookup=None):
             continue
         B.append(mB + g + k * ccmB)
         V.append(mV + g + k * ccmV)
-    return ph, np.array(B), np.array(V)
+    return ph, np.array(B), np.array(V), warps
 
 
 def _hsiao_pair(z, t0):
@@ -230,7 +231,7 @@ def synthesize(rows, z, engine='hsiao', n_mc=200, seed=0, t0_guess=None):
             pars = dict(zip(res.param_names, res.parameters))
             t0, x0 = pars['t0'], pars['x0']
             mo, mr = _salt_pair(z, t0, x1, c, x0)
-            ph, B, V = warped_rest_BV(rows, z, mo, mr, t0)
+            ph, B, V, _ = warped_rest_BV(rows, z, mo, mr, t0)
             gsel = np.isfinite(B) & np.isfinite(V)
             if gsel.sum() < 3:
                 break
@@ -266,16 +267,23 @@ def synthesize(rows, z, engine='hsiao', n_mc=200, seed=0, t0_guess=None):
             P['gates'].append('kcorr_no_convergence')
             P['note'] = f'(x1, c) not converged after {len(trace)} iterations'
             return P
+        if abs(x1) > 3.9 or c <= -0.39 or c >= 0.99:
+            P['gates'].append('dm15_provenance')
+            P['note'] = (f'template parameter at bound (x1={x1:.2f}, c={c:.3f}): '
+                         'no trustworthy shape/window')
+            P['iterations'] = trace
+            return P
         P['params'] = dict(t0=float(t0), x0=float(x0), x1=x1, c=c)
+        P['x1'] = round(x1, 3); P['c'] = round(c, 4)
         mo, mr = _salt_pair(z, t0, x1, c, x0)
-        ph, B0, V0 = warped_rest_BV(rows, z, mo, mr, t0)
+        ph, B0, V0, _ = warped_rest_BV(rows, z, mo, mr, t0)
         s = 1.0
         draws = []
         for _ in range(n_mc if n_mc > 1 else 0):
             pert = {id(r): r['mag'] + rng.standard_normal() * r['emag']
                     for r in rows}
-            _, Bd, Vd = warped_rest_BV(rows, z, mo, mr, t0,
-                                       mag_lookup=lambda r: pert[id(r)])
+            _, Bd, Vd, _ = warped_rest_BV(rows, z, mo, mr, t0,
+                                          mag_lookup=lambda r: pert[id(r)])
             draws.append(np.concatenate([Bd, Vd]))
         b_max = float(mr.bandmag('bessellb', 'vega', 0.))
         v_max = float(mr.bandmag('bessellv', 'vega', 0.))
@@ -322,15 +330,27 @@ def synthesize(rows, z, engine='hsiao', n_mc=200, seed=0, t0_guess=None):
             cand = [(total_resid(tt, s), tt) for tt in
                     np.arange(t0 - 2 * step, t0 + 2 * step + 0.01, step)]
             _, t0 = min(cand)
+        if s <= 0.76 or s >= 1.27:
+            P['gates'].append('dm15_provenance')
+            P['note'] = (f'stretch at the grid bound (s={s:.2f}): no trustworthy '
+                         'shape/window')
+            return P
         P['params'] = dict(t0=float(t0), stretch=float(s))
         mo.set(t0=t0)
-        ph, B0, V0 = warped_rest_BV(rows, z, mo, mr, t0, s)
+        ph, B0, V0, warps0 = warped_rest_BV(rows, z, mo, mr, t0, s)
+        # covariates: x1-equivalent from the stretch (approximate linear mapping
+        # s ~ 0.98 + 0.091 x1, Guy et al. 2010) and the near-peak color-warp tilt
+        # (E(B-V)-like amplitude) as the c proxy - documented approximations
+        P['x1'] = round((s - 0.98) / 0.091, 3)
+        ks = [w[1] for w, p_ in zip(warps0, ph)
+              if np.isfinite(w[1]) and abs(p_) < 10.]
+        P['c'] = round(float(np.mean(ks)), 4) if ks else None
         draws = []
         for _ in range(n_mc if n_mc > 1 else 0):
             pert = {id(r): r['mag'] + rng.standard_normal() * r['emag']
                     for r in rows}
-            _, Bd, Vd = warped_rest_BV(rows, z, mo, mr, t0, s,
-                                       mag_lookup=lambda r: pert[id(r)])
+            _, Bd, Vd, _ = warped_rest_BV(rows, z, mo, mr, t0, s,
+                                          mag_lookup=lambda r: pert[id(r)])
             draws.append(np.concatenate([Bd, Vd]))
         i_near = int(np.argmin(np.abs(ph)))
         off = B0[i_near] - float(mr.bandmag('bessellb', 'vega', ph[i_near] / s))
@@ -375,14 +395,14 @@ def insensitivity_variants(rows, z, base, seed=0):
         try:
             mo, mr = _salt_pair(z, t0, float(np.clip(xx1, -4, 4)),
                                 float(np.clip(cc, -0.4, 1.0)), x0)
-            out[name] = warped_rest_BV(rows, z, mo, mr, t0)
+            out[name] = warped_rest_BV(rows, z, mo, mr, t0)[:3]
         except Exception:
             continue
     try:
         mo, mr = _hsiao_pair(z, t0)
         mo.set(t0=t0)
         s = base.get('params', {}).get('stretch', 1.0)
-        out['hsiao'] = warped_rest_BV(rows, z, mo, mr, t0, s)
+        out['hsiao'] = warped_rest_BV(rows, z, mo, mr, t0, s)[:3]
     except Exception:
         pass
     return out

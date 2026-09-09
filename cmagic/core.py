@@ -172,6 +172,9 @@ def cmagic_fit(tB, mB, eB, tV, mV, eV, z, t_bmax, dm15,
         P['flags'].append(f'modeS: {nS} point(s), color leverage '
                           f'{P["color_leverage"]}, slope-systematic share '
                           f'{P["slope_syst_share"]}')
+        if nS == 1 and P['color_leverage'] > 0.3:
+            P['flags'].append('modeS_single_point_high_leverage: distance rests '
+                              'on one epoch far from the fiducial color')
         raw06 = mhat
     else:   # Mode R
         if b_max is None or v_max is None or not np.isfinite(b_max + v_max):

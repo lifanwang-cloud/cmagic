@@ -58,3 +58,19 @@ silently patched:
     E(B−V) ≲ 0.1 makes higher-order terms negligible there.
 12. **`system=` remains bookkeeping**; the high-z path assumes AB for survey filters
     and Vega for bessell/csp/2mass names.
+
+## v0.3.0
+
+13. **Boundary-hit gate**: `dm15_provenance` now also fires when the template fit pins
+    the shape at a bound (SALT3-NIR |x1| > 3.9 or c at its bounds; Hsiao stretch at the
+    grid edge). Six SDSS validation objects gate out this way; snid 2030 (whose external
+    SALT3 x1 = 4.0 hit the bound while its own Hsiao stretch was interior) is excluded
+    from sample fits through the covariate validity requirement and its chain result now
+    carries the `modeS_single_point_high_leverage` flag.
+14. **Issue #9 (error budgets) revised**: after the §6.1 fitted corrections, per-mode
+    chi²/dof is unity BY CONSTRUCTION of the fitted inflation factors (L 1.28, S 1.63 on
+    SDSS); the underlying scatter excess is thereby quantified rather than resolved.
+15. **Correction precedence**: fitted beta_C·c supersedes the internal
+    (R_B − beta)·E_host correction (backed out of the base mu when 'c' is fitted);
+    the two are never applied together. Hsiao-engine covariates are approximations
+    (s→x1 linear mapping; near-peak warp tilt as c) and are documented as such.

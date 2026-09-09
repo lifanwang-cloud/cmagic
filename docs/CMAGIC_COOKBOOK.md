@@ -211,6 +211,46 @@ error propagated through (R_B − β), and the K-correction ambiguity (≤ 0.01 
 
 ---
 
+### 6.1 Sample-level fitted corrections (v0.3)
+
+The PI's rule, verbatim: **"the correct way is to always fit the x1 and c correction so
+that any correlation is removed."** Whenever a SAMPLE of CMAGIC distances is assembled,
+the standardization of §6 gains fitted shape and color terms:
+
+```
+resid_i = M0 + delta_S·[mode_i = S] + alpha_C·x1_i + beta_C·c_i
+```
+
+fit by robust weighted least squares against the Hubble residuals
+(`cmagic.standardize_sample`; covariates from the object's own engine — the SALT3-NIR
+iterative (x1, c), or the Hsiao stretch mapped through s ≈ 0.98 + 0.091 x1 with the
+near-peak color-warp tilt as the c proxy — or supplied externally, e.g. from an
+independent SALT3 run). The mode-offset term delta_S repairs the L-versus-S zero-point
+split found in the §10.1 comparison; coefficient covariance is propagated into the
+corrected errors, and per-mode errors are inflated so the post-fit chi²/dof is unity per
+mode. The post-fit weighted residual correlations against x1 and c are zero by
+construction — that is the acceptance criterion, and the test suite asserts it.
+
+**Precedence (no double color correction).** When beta_C is fitted, the internal W03
+Eqs 7–9 host-extinction correction is backed out of the base magnitudes — the fitted
+color term empirically absorbs what the internal E_host estimator measures (and, on
+synthesized high-z peaks, what it misses). E_host remains reported for diagnostics, but
+its correction applies only when the user excludes 'c' from the covariates.
+
+**Single-object caveat.** A single supernova is never corrected by fitted terms:
+`distance()` output is estimator-pure, and the fitted corrections are a sample-level
+operation — exactly as SALT3's alpha/beta are training products, not per-object physics.
+
+**SDSS-II numbers (v0.3, 28-object fit set; 6 objects newly gated by the
+boundary-hit rule, snids 1794/2017/2031/2440/2635/2992, and 2030 excluded for its
+bound-hit external covariate):** M0 = +0.142 ± 0.037, delta_S = −0.101 ± 0.062,
+alpha_C = −0.055 ± 0.038, beta_C = +0.953 ± 0.348. Pre → post: rms 0.246 → 0.213
+(mode L 0.181 → 0.165, mode S 0.292 → 0.263); chi²/dof 2.85 → 2.09, and 1.0 per mode
+after inflation (factors L 1.28, S 1.63). Post-fit weighted correlations: r(x1) = 0.00,
+r(c) = 0.00 (unweighted −0.06, +0.01).
+
+---
+
 ## 7. Failure semantics and provenance (what makes this pipeline safe to use blind)
 
 Every fit either returns a distance **or a named gate**, never a silently degraded number:
@@ -447,3 +487,13 @@ cross-check and systematics probe (its per-object K_systematic and named gates l
 what SALT3 absorbs silently), and the identified defects — the sparse-mode error model,
 the synthesized-peak extinction estimator, and the mode-dependent zero point — are
 concrete v0.3 targets rather than fundamental limits.
+
+
+#### v0.3 update to the SALT3 comparison
+
+With the boundary-hit gate (6 stretch-at-bound objects removed, including two of the
+former >3σ outliers) and the §6.1 fitted corrections applied, the CMAGIC sample tightens
+from rms 0.32 (v0.2 overlap) to **0.21 mag** overall (0.165 mode L), the L-versus-S
+zero-point split is absorbed into delta_S = −0.10 ± 0.06, and the per-mode error budgets
+close (chi²/dof = 1 by construction of the inflation). SALT3 remains tighter (0.14/0.09);
+the gap after correction is ≈1.5× rather than ≈2–3×.
