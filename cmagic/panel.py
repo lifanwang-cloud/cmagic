@@ -7,7 +7,7 @@ def make_panel(P, path, title=''):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, (ax, axc) = plt.subplots(1, 2, figsize=(11, 6), gridspec_kw={'width_ratios': [2.4, 1]})
     ok = P.get('ok', False) and P.get('failed') is None
     loc = P.get('locus')
     if loc and loc['phases']:
@@ -51,7 +51,7 @@ def make_panel(P, path, title=''):
             ax.axvline(sc.max(), ls='--', lw=1.1, color='firebrick',
                        label=f"exit (+{P.get('window', ['?', '?'])[1]} d)")
         ax.invert_yaxis()
-        ins = ax.inset_axes([0.63, 0.08, 0.34, 0.28])
+        ins = axc
         o_ = np.argsort(ph)
         ins.plot(ph[o_], col[o_], '.-', color='grey', ms=3, lw=0.7)
         if s and s['phases']:

@@ -8,3 +8,4 @@ dist/
 .pytest_cache/
 examples/*.png
 .DS_Store
+sdss_panels/
