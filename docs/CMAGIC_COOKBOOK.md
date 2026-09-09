@@ -519,7 +519,14 @@ The **unweighted rms** is the plain standard deviation of the Hubble residuals; 
 **error-weighted rms** is (Σw r²/Σw)^½ with w = 1/σ² and each method's *weighted* grey
 offset removed. Fits (the sample standardization of §6.1, and every regression in the
 pipeline) are always error-weighted; scatter tables in earlier sections quoted the
-unweighted rms unless marked. On the v0.3 standardized SDSS-II sample, both are shown in
+unweighted rms unless marked. The convention follows Wang, Strovink et al. (2006): their
+§2.3 χ²-rescaling of fit errors is the per-fit √(χ²/dof) normalization of §9.1 here, and
+their intrinsic-noise terms (added until χ²/dof ≈ 1) are the sample-level inflation of
+§6.1. WS06's Hubble-flow variance also carries a peculiar-velocity term
+(5/ln 10)·v_pec/(cz) with v_pec fitted (their 95% upper limit 486 km s⁻¹); at this
+subsample's z ≥ 0.06 a 300 km s⁻¹ term contributes only 0.006–0.035 mag against
+per-object errors of 0.15–0.27 mag, so it is omitted here — include it for any sample
+reaching below z ≈ 0.03. On the v0.3 standardized SDSS-II sample, both are shown in
 the Hubble figure: SALT3 0.143 unweighted / 0.133 weighted (n = 56); CMAGIC mode L
 0.165 / 0.170 (n = 16); mode S 0.263 / 0.272 (n = 12). With the fitted corrections and
 honest error inflation, mode L is within ~30% of SALT3's scatter on the same photometry;
@@ -542,9 +549,32 @@ all −0.001 ± 0.038 (χ²/dof 0.98, n = 28); mode L −0.000 ± 0.043 (1.00, 1
 −0.003 ± 0.083 (1.03, 12) — the per-mode χ²/dof ≈ 1 is an outcome of the v0.3.1 error
 model, not a construction. By redshift bin: +0.036 ± 0.053 (z 0.05–0.15), −0.061 ± 0.071
 (0.15–0.25), +0.073 ± 0.140 (0.25–0.35): no redshift trend, and z was never a fitted
-covariate. On the same photometry SALT3's weighted residual (its own convention offset
-removed only globally) drifts by +0.161 ± 0.049 (3.3σ) from the low to the high bin —
-plausibly survey selection and population drift through fixed Tripp coefficients. With
-only six CMAGIC objects in the top bin this is an observation to monitor, not a claim:
-if the flatness survives larger samples, redshift stability becomes one of CMAGIC's
-distinguishing properties as a cross-check estimator.
+covariate.
+
+**The SALT3 redshift drift, diagnosed.** On the same photometry SALT3's weighted
+residual with *fixed* fiducial Tripp coefficients (α = 0.14, β = 3.1) drifts by
++0.161 ± 0.049 (3.3σ) from the low to the high bin (+0.180 ± 0.061 on the 28-object
+common subset). Most of this is the comparison's own construction, not SALT3, and none
+of it is a cosmology-grade statement:
+
+- The subsample's covariates drift with redshift exactly as magnitude-limited selection
+  predicts: ⟨x1⟩ = +0.21 → +1.11 and ⟨c⟩ = +0.019 → −0.048 from the low to the high
+  tercile (r(x1, z) = +0.43). Any mismatch between the fiducial coefficients and the
+  ones this subsample prefers therefore maps covariate drift directly into a
+  residual-vs-z slope.
+- Refitting (M0, α, β) on the same 28 objects — the identical treatment CMAGIC receives
+  in §6.1 — gives α = 0.097 ± 0.021, β = 2.41 ± 0.20 and cuts the drift to
+  +0.098 ± 0.050 (2.0σ); the residual-vs-z slope falls from +1.03 ± 0.36 to
+  +0.39 ± 0.29 mag per unit z. The coefficient-mismatch × covariate-drift product
+  (+0.085 mag) accounts for the removed part.
+- The symmetric comparison is then SALT3 +0.098 ± 0.050 vs CMAGIC +0.016 ± 0.103: a
+  difference of 0.08 ± 0.11 — no significant method discrimination. CMAGIC's flatness
+  currently has ±0.10 mag resolution and cannot claim immunity.
+- The residual 2σ drift is what an uncorrected magnitude-limited subsample can show:
+  no simulation-based selection/bias corrections (BBC-style) were applied here, as they
+  are in every published SALT cosmology analysis, and the fits run on a magnitude-space
+  conversion of a cached 60-object subset. Nothing in this table measures cosmology.
+
+What survives as the monitoring target: CMAGIC's redshift stability at its present
+±0.10 mag resolution, to be retested on a sample with per-bin errors below 0.05 mag.
+Reproduce the decomposition with `examples/sdss_salt3_drift_diagnostic.py`.

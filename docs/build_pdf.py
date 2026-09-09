@@ -17,9 +17,17 @@ for i, p in enumerate(parts):
     if p.startswith("```"):
         parts[i] = p.replace("ℰ", "Ecal")
         continue
-    p = re.sub("[₀-₉]+", lambda m: "$_{" + "".join(sub[c] for c in m.group(0)) + "}$", p)
-    for a, b in [("≈", r"$\\approx$"), ("≤", r"$\\le$"), ("≥", r"$\\ge$"), ("≳", r"$\\gtrsim$"),
-                 ("≲", r"$\\lesssim$"), ("ℰ", r"$\\mathcal{E}$"), ("ᵏ", r"$^{k}$"), ("→", r"$\\rightarrow$")]:
+    # \ensuremath, not $..$ or \(..\): a $-span abutting a digit fails pandoc's
+    # math parsing (the command then runs in TEXT mode -> missing text glyph),
+    # and \( is swallowed by pandoc's backslash-escape rule. \ensuremath{..}
+    # passes through as raw LaTeX and is safe in any mode and any adjacency.
+    p = re.sub("[₀-₉]+", lambda m: r"\ensuremath{_{" + "".join(sub[c] for c in m.group(0)) + "}}", p)
+    for a, b in [("≈", r"\\ensuremath{\\approx}"), ("≤", r"\\ensuremath{\\le}"),
+                 ("≥", r"\\ensuremath{\\ge}"), ("≳", r"\\ensuremath{\\gtrsim}"),
+                 ("≲", r"\\ensuremath{\\lesssim}"), ("ℰ", r"\\ensuremath{\\mathcal{E}}"),
+                 ("ᵏ", r"\\ensuremath{^{k}}"), ("→", r"\\ensuremath{\\rightarrow}"),
+                 ("√", r"\\ensuremath{\\surd}"),
+                 ("⟨", r"\\ensuremath{\\langle}"), ("⟩", r"\\ensuremath{\\rangle}")]:
         p = re.sub(a, b, p)
     parts[i] = p
 with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
@@ -27,7 +35,8 @@ with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
 out = os.path.join(HERE, "CMAGIC_COOKBOOK.pdf")
 subprocess.run(["pandoc", tmp, "-o", out, "--pdf-engine=xelatex",
                 "-V", "geometry:margin=25mm", "-V", "fontsize=11pt",
-                "-V", "mainfont=STIX Two Text", "-V", "monofont=Menlo",
+                "-V", "mainfont=STIX Two Text", "-V", "mathfont=STIX Two Math",
+                "-V", "monofont=Menlo",
                 "-V", "colorlinks=true", "--toc", "--toc-depth=2",
                 "-M", "title=The CMAGIC Cookbook", "-M", "author=Lifan Wang"], check=True)
 os.unlink(tmp)
