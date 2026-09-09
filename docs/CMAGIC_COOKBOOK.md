@@ -632,6 +632,11 @@ of it is a cosmology-grade statement:
 - The physics behind the mechanism — why a single fitted β cannot be universal when the
   dust-to-intrinsic color mixture drifts with redshift — is §5.1's account of the two
   extinction philosophies.
+- All drifts here are measured against a fixed ΛCDM(Ω_m = 0.3): they conflate
+  standardization with any genuine cosmology mismatch. Over this sample's tercile span
+  the conflation is small (±0.01–0.04 mag for the parameter ranges SN data actually
+  prefer, and of the *opposite* sign to the measured drift) — see §10.4 for the full
+  accounting and the cosmology-free differential-drift statistic.
 
 What survives as the monitoring target: CMAGIC's redshift stability at its present
 ±0.10 mag resolution, to be retested on a sample with per-bin errors below 0.05 mag.
@@ -703,6 +708,26 @@ halves it (+0.105 ± 0.057, 1.9σ), CMAGIC is flat (+0.032 ± 0.074), and the re
 bias-corrected MU is flat (+0.030) — the survey's simulation-based corrections remove
 for SALT3 a drift that CMAGIC does not exhibit in the first place. (The low-z
 contaminant had masked this in the 53-object table, which read flat everywhere.)
+
+**The drift statistic conflates standardization with cosmology** (the PI's caveat, and
+part of why Conley et al. 2006 ran blind). Every drift above is measured against a
+*fixed* ΛCDM(Ω_m = 0.3, H₀ = 72); if the supernovae themselves prefer different
+(Ω_m, Ω_Λ) — and SN-alone fits do sit off (0.3, 0.7): DES-SN5YR alone gives
+Ω_m = 0.352 ± 0.017 in flat ΛCDM, (Ω_m, w) ≈ (0.36, −0.8) in flat wCDM — the genuine
+cosmological difference appears as a coherent residual tilt. Quantitatively, over
+these tercile spans the mismatch contributes: Ω_m 0.30 → 0.352, −0.014 (SDSS) /
+−0.024 (DES) mag; the wCDM fit, −0.039 / −0.062 mag. Two consequences. (i) The sign
+is *negative* (data-preferred cosmologies make high-z SNe brighter relative to the
+Ω_m = 0.3 reference), so cosmology mismatch of the size SN data actually prefer would
+mask, not create, the positive fixed-coefficient drifts — producing +0.105 by
+cosmology alone would need Ω_m ≈ 0.07, outside any supernova contour; the SALT3
+drifts remain standardization/selection-dominated. (ii) But every *flatness* claim at
+the ±0.03–0.07 level now carries a cosmology ambiguity of comparable size — "flat
+against fixed ΛCDM" should not be read below that floor. The cosmology-free
+standardization test is the **differential drift**, method minus the release's
+bias-corrected MU on the same objects, in which the cosmology cancels exactly:
+CMAGIC −0.033 ± 0.090 (consistent with the survey's standardization), our quick SALT3
++0.089 ± 0.076 (its uncorrected selection residue).
 
 **The resolution of the 'mystery'** (CMAGIC beats peak methods at low z in W03/WS06,
 loses at 2.4× on SDSS): the gap tracks the signal-to-noise contrast between the
