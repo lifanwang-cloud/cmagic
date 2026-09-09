@@ -196,6 +196,50 @@ R_B = 3.1 by default (override per object when the dust law is known to be anoma
 E_host absorbs *color calibration errors* of the photometry as if they were dust — the reason
 the pipeline enforces single-source photometry (§7).
 
+### 5.1 The two extinction philosophies
+
+Supernova cosmology has always had two ways to handle a red supernova, and the two teams
+whose samples discovered the accelerating expansion each used one of them. The
+**empirical-extinction route** — the original Riess et al. (High-z Team / MLCS) analyses —
+estimates the extinction of each object from its own photometry as a color excess over an
+intrinsic locus, then corrects it through a **known extinction law** (an assumed R_B).
+The **Tripp route** (Tripp 1998; the standardization of Perlmutter et al.'s SCP lineage,
+and of SALT2/SALT3 today) does not ask *why* an object is red: it fits one linear color
+coefficient β on the whole sample and lets the regression decide the correction.
+
+What each buys, and what each risks:
+
+- The **empirical route** is physically explicit and per-object, and it preserves
+  whatever signal remains in the residuals. Its systematic is the assumed law:
+  SN 2006X's anomalous dust (R_B ≈ 2.48) corrected with the standard 3.1 produces a
+  0.82 mag distance error from the law alone (§3, Mode R).
+- The **Tripp route** is self-calibrating and agnostic, but its fitted β is a
+  variance-weighted compromise between two physically different slopes: the dust vector
+  (R_B ≈ 4.1) and the intrinsic color–luminosity slope. One β is correct only if the
+  dust-to-intrinsic mixture of the sample's colors is universal. When selection changes
+  that mixture with redshift — a magnitude-limited survey keeps losing dusty objects
+  toward high z — the correct effective β changes along the redshift axis while the
+  applied one does not, and the mismatch leaks into the Hubble diagram. That is the
+  mechanism behind the SALT3 redshift drift dissected in §10.3, where the sample-fitted
+  β = 2.41 ± 0.20 sits well below both the fiducial 3.1 and the dust value — the
+  signature of a blended color.
+
+CMAGIC's position in this dichotomy is distinctive on both counts:
+
+1. **The pipeline carries both routes.** The internal W03 estimator above (E_host from
+   ℰ − ℰ₀, corrected through the known law as (R_B − β_BV)·E_host) is the empirical
+   route, per object. The sample-level fitted β_C·c of §6.1 is the Tripp route. The
+   precedence rule of §6.1 selects which one is in force — never both — so the user
+   always knows which assumption they are buying: a known dust law, or a universal
+   color–luminosity relation. Disagreement between the two routes on a single object is
+   itself a diagnostic; it is what flagged SN 2006X.
+2. **The dust lever arm is halved by construction.** Extinction enters B_BV0.6 as
+   (R_B − β_BV)·E ≈ 2.2·E rather than R_B·E ≈ 4.1·E, so whichever route errs, the
+   damage to a CMAGIC distance is roughly half of what the same error does to a
+   peak-magnitude method. This is also why the fitted color term on CMAGIC residuals is
+   small (β_C = +0.94 ± 0.35 on the SDSS-II sample, §6.1): most of the color
+   sensitivity is removed before standardization ever sees it.
+
 ---
 
 ## 6. Standardization and the distance
@@ -241,7 +285,9 @@ construction — that is the acceptance criterion, and the test suite asserts it
 Eqs 7–9 host-extinction correction is backed out of the base magnitudes — the fitted
 color term empirically absorbs what the internal E_host estimator measures (and, on
 synthesized high-z peaks, what it misses). E_host remains reported for diagnostics, but
-its correction applies only when the user excludes 'c' from the covariates.
+its correction applies only when the user excludes 'c' from the covariates. This toggle
+is exactly the choice between the two extinction philosophies of §5.1: covariates with
+'c' = the Tripp route, without = the empirical-extinction route.
 
 **Single-object caveat.** A single supernova is never corrected by fitted terms:
 `distance()` output is estimator-pure, and the fitted corrections are a sample-level
@@ -304,6 +350,9 @@ slides points along the dust vector. The free slope is CMAGIC's built-in dust-va
   Siegrist, J. 2006, ApJ, 641, 50
 - Cardelli, J. A., Clayton, G. C., & Mathis, J. S. 1989, ApJ, 345, 245
 - Schlafly, E. F., & Finkbeiner, D. P. 2011, ApJ, 737, 103
+- Tripp, R. 1998, A&A, 331, 815
+- Riess, A. G., et al. 1998, AJ, 116, 1009
+- Perlmutter, S., et al. 1999, ApJ, 517, 565
 
 ---
 
@@ -574,6 +623,9 @@ of it is a cosmology-grade statement:
   no simulation-based selection/bias corrections (BBC-style) were applied here, as they
   are in every published SALT cosmology analysis, and the fits run on a magnitude-space
   conversion of a cached 60-object subset. Nothing in this table measures cosmology.
+- The physics behind the mechanism — why a single fitted β cannot be universal when the
+  dust-to-intrinsic color mixture drifts with redshift — is §5.1's account of the two
+  extinction philosophies.
 
 What survives as the monitoring target: CMAGIC's redshift stability at its present
 ±0.10 mag resolution, to be retested on a sample with per-bin errors below 0.05 mag.
